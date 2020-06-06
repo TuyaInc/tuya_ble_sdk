@@ -37,33 +37,6 @@
 
 typedef struct
 {
-    uint32_t  crc;
-    uint32_t  settings_version;
-    uint8_t   h_id[H_ID_LEN];
-    uint8_t   device_id[DEVICE_ID_LEN];
-    uint8_t   mac[MAC_LEN];
-    uint8_t   auth_key[AUTH_KEY_LEN];
-} tuya_ble_auth_settings_old_t;
-
-
-typedef struct
-{
-    uint32_t  crc;
-    uint32_t  settings_version;
-    tuya_ble_product_id_type_t pid_type;
-    uint8_t   pid_len;
-    uint8_t   common_pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
-    uint8_t   login_key[LOGIN_KEY_LEN];
-    uint8_t   ecc_secret_key[ECC_SECRET_KEY_LEN];
-    uint8_t   device_virtual_id[DEVICE_VIRTUAL_ID_LEN];
-    uint8_t   user_rand[PAIR_RANDOM_LEN];
-    uint8_t   bound_flag;
-} tuya_ble_sys_settings_old_t;
-
-
-//static uint8_t init=0;
-typedef struct
-{
     tuya_ble_auth_settings_t flash_settings_auth;
     tuya_ble_auth_settings_t flash_settings_auth_backup;
 } tuya_ble_storage_auth_settings_t;
@@ -74,6 +47,428 @@ typedef struct
     tuya_ble_sys_settings_t flash_settings_sys_backup;
 } tuya_ble_storage_sys_settings_t;
 
+
+static tuya_ble_nv_async_callback_t storage_init_complete = NULL;
+static tuya_ble_storage_auth_settings_t read_storage_settings_auth;
+static tuya_ble_storage_sys_settings_t read_storage_settings_sys;
+static uint8_t tuya_ble_storage_init_flag = 0;
+
+static tuya_ble_nv_async_callback_t storage_save_auth_settings_completed = NULL;
+static uint8_t tuya_ble_storage_save_auth_settings_flag = 0;
+
+static tuya_ble_nv_async_callback_t storage_save_sys_settings_completed = NULL;
+static uint8_t tuya_ble_storage_save_sys_settings_flag = 0;
+
+
+static uint16_t save_sys_settings_sn = 0;
+static uint16_t save_auth_settings_sn = 0;
+
+
+/*********************************************************************************************************************************************
+tuya_ble_storage_save_sys_settings_async:
+**********************************************************************************************************************************************/
+
+static void tuya_ble_storage_save_sys_settings_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t current_sn = 0;
+    uint16_t data_len = 0;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        current_sn = (p_data[0]<<8)+p_data[1];
+        data_len = (p_data[2]<<8)+p_data[3];
+        if (result == TUYA_BLE_SUCCESS)
+        {
+            TUYA_BLE_LOG_INFO("save flash_settings_sys data succeed, current sn = %d ,data addr = 0x%08x.",current_sn,p_data);
+        }
+        else
+        {
+            TUYA_BLE_LOG_ERROR("save flash_settings_sys data failed, err code = %d ,current sn = %d ,data addr = 0x%08x.",result,current_sn,p_data);
+        }
+
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+    else
+    {
+        TUYA_BLE_LOG_ERROR("save flash_settings_sys data was failed due to internal error;");  //It should never happen
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+
+}
+
+static void tuya_ble_storage_save_sys_settings_async_backup_erase_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        data_len = (p_data[2]<<8)+p_data[3];
+    }
+    else
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_write_async(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,p_data+8,data_len,p_data,tuya_ble_storage_save_sys_settings_completed);
+        TUYA_BLE_LOG_DEBUG("save flash_settings_sys data start write data to TUYA_BLE_SYS_FLASH_BACKUP_ADDR, current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+    }
+    else
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+
+}
+
+static void tuya_ble_storage_save_sys_settings_async_write_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = (uint8_t *)p_param;
+
+    if(p_param==NULL)
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_erase_async(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,TUYA_NV_ERASE_MIN_SIZE, p_param,tuya_ble_storage_save_sys_settings_async_backup_erase_completed);
+
+        TUYA_BLE_LOG_DEBUG("save flash_settings_sys data start erase data to TUYA_BLE_SYS_FLASH_BACKUP_ADDR, current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+    }
+    else
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+
+}
+
+
+static void tuya_ble_storage_save_sys_settings_async_erase_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        data_len = (p_data[2]<<8)+p_data[3];
+    }
+    else
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_write_async(TUYA_BLE_SYS_FLASH_ADDR,p_data+8,data_len,p_data,tuya_ble_storage_save_sys_settings_async_write_completed);
+        TUYA_BLE_LOG_DEBUG("save flash_settings_sys data start write data to TUYA_BLE_SYS_FLASH_ADDR,current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+    }
+    else
+    {
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_sys_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+
+}
+
+void tuya_ble_storage_save_sys_settings_async(tuya_ble_nv_async_callback_t callback)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+
+    if(tuya_ble_storage_save_sys_settings_flag)
+    {
+        if(callback)
+        {
+            callback(NULL,TUYA_BLE_ERR_BUSY);
+        }
+        return;
+    }
+    else
+    {
+        tuya_ble_storage_save_sys_settings_flag = 1;
+    }
+
+    storage_save_sys_settings_completed = callback;
+
+    tuya_ble_current_para.sys_settings.crc = tuya_ble_crc32_compute((uint8_t *)&tuya_ble_current_para.sys_settings+4,sizeof(tuya_ble_sys_settings_t)-4,NULL);
+
+    data_len = sizeof(tuya_ble_sys_settings_t);
+
+    p_data = (uint8_t *)tuya_ble_malloc(data_len+8);
+
+    if(p_data == NULL)
+    {
+        TUYA_BLE_LOG_ERROR("save flash_settings_auth data malloc failed.");
+        if(storage_save_sys_settings_completed)
+            storage_save_sys_settings_completed(NULL,TUYA_BLE_ERR_NO_MEM);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_sys_settings_completed = NULL;
+    }
+    else
+    {
+        tuya_ble_device_enter_critical();
+        save_sys_settings_sn++;
+        if(save_sys_settings_sn>=0xFFFF)
+            save_sys_settings_sn = 0;
+        p_data[0] = save_sys_settings_sn>>8;
+        p_data[1] = save_sys_settings_sn;
+        p_data[2] = data_len>>8;
+        p_data[3] = data_len;
+        p_data[4] = 0;
+        p_data[5] = 0;
+        p_data[6] = 0;
+        p_data[7] = 0;
+        memcpy(p_data+8,(uint8_t *)&tuya_ble_current_para.sys_settings,data_len);
+        tuya_ble_nv_erase_async(TUYA_BLE_SYS_FLASH_ADDR,TUYA_NV_ERASE_MIN_SIZE, p_data,tuya_ble_storage_save_sys_settings_async_erase_completed);
+        tuya_ble_device_exit_critical();
+
+        TUYA_BLE_LOG_DEBUG("save flash_settings_sys data start erase data to TUYA_BLE_SYS_FLASH_ADDR, current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+
+    }
+
+}
+
+
+/*********************************************************************************************************************************************
+tuya_ble_storage_save_auth_settings_async:
+**********************************************************************************************************************************************/
+
+static void tuya_ble_storage_save_auth_settings_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t current_sn = 0;
+    uint16_t data_len = 0;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        current_sn = (p_data[0]<<8)+p_data[1];
+        data_len = (p_data[2]<<8)+p_data[3];
+
+        if (result == TUYA_BLE_SUCCESS)
+        {
+            TUYA_BLE_LOG_INFO("save flash_settings_auth data succeed, current sn = %d ,data addr = 0x%08x.",current_sn,p_data);
+        }
+        else
+        {
+            TUYA_BLE_LOG_ERROR("save flash_settings_auth data failed, err code = %d ,current sn = %d ,data addr = 0x%08x.",result,current_sn,p_data);
+        }
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,result);
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+    else
+    {
+        TUYA_BLE_LOG_ERROR("save flash_settings_auth data was failed due to internal error;");  //It should never happen
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+
+}
+
+static void tuya_ble_storage_save_auth_settings_async_backup_erase_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+    tuya_ble_status_t err_code = TUYA_BLE_SUCCESS;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        data_len = (p_data[2]<<8)+p_data[3];
+    }
+    else
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_write_async(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,p_data+8,data_len,p_data,tuya_ble_storage_save_auth_settings_completed);
+        TUYA_BLE_LOG_DEBUG("save flash_settings_auth data start write data to TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+    }
+    else
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+
+}
+
+static void tuya_ble_storage_save_auth_settings_async_write_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+
+    if(p_param==NULL)
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_erase_async(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,TUYA_NV_ERASE_MIN_SIZE, p_param,tuya_ble_storage_save_auth_settings_async_backup_erase_completed);
+        p_data = (uint8_t *)p_param;
+        TUYA_BLE_LOG_DEBUG("save flash_settings_auth data start erase data to TUYA_BLE_AUTH_FLASH_BACKUP_ADDR, current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+    }
+    else
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+
+}
+
+
+static void tuya_ble_storage_save_auth_settings_async_erase_completed(void * p_param,tuya_ble_status_t result)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+
+    if(p_param)
+    {
+        p_data = (uint8_t *)p_param;
+        data_len = (p_data[2]<<8)+p_data[3];
+    }
+    else
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,TUYA_BLE_ERR_INTERNAL);//error
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+        return;
+    }
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_write_async(TUYA_BLE_AUTH_FLASH_ADDR,p_data+8,data_len,p_data,tuya_ble_storage_save_auth_settings_async_write_completed);
+        TUYA_BLE_LOG_DEBUG("save flash_settings_auth data start write data to TUYA_BLE_AUTH_FLASH_ADDR, current sn = %d , data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+
+    }
+    else
+    {
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,result);//FAIL
+        tuya_ble_free(p_data);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+
+}
+
+void tuya_ble_storage_save_auth_settings_async(tuya_ble_nv_async_callback_t callback)
+{
+    uint8_t *p_data = NULL;
+    uint16_t data_len = 0;
+    tuya_ble_status_t err_code = TUYA_BLE_SUCCESS;
+
+    if(tuya_ble_storage_save_auth_settings_flag)
+    {
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_BUSY);
+        return;
+    }
+    else
+    {
+        tuya_ble_storage_save_auth_settings_flag = 1;
+    }
+
+    storage_save_auth_settings_completed = callback;
+
+    tuya_ble_current_para.auth_settings.crc = tuya_ble_crc32_compute((uint8_t *)&tuya_ble_current_para.auth_settings+4,sizeof(tuya_ble_current_para.auth_settings)-4,NULL);
+
+    data_len = sizeof(tuya_ble_auth_settings_t);
+
+    p_data = (uint8_t *)tuya_ble_malloc(data_len+8);
+
+    if(p_data == NULL)
+    {
+        TUYA_BLE_LOG_ERROR("save flash_settings_auth data malloc failed.");
+        if(storage_save_auth_settings_completed)
+            storage_save_auth_settings_completed(NULL,TUYA_BLE_ERR_NO_MEM);
+        tuya_ble_storage_save_auth_settings_flag = 0;
+        storage_save_auth_settings_completed = NULL;
+    }
+    else
+    {
+        tuya_ble_device_enter_critical();
+        save_auth_settings_sn++;
+        if(save_auth_settings_sn>=0xFFFF)
+            save_auth_settings_sn = 0;
+        p_data[0] = save_auth_settings_sn>>8;
+        p_data[1] = save_auth_settings_sn;
+        p_data[2] = data_len>>8;
+        p_data[3] = data_len;
+        p_data[4] = 0;
+        p_data[5] = 0;
+        p_data[6] = 0;
+        p_data[7] = 0;
+        memcpy(p_data+8,(uint8_t *)&tuya_ble_current_para.auth_settings,data_len);
+        tuya_ble_nv_erase_async(TUYA_BLE_AUTH_FLASH_ADDR,TUYA_NV_ERASE_MIN_SIZE, p_data,tuya_ble_storage_save_auth_settings_async_erase_completed);
+        tuya_ble_device_exit_critical();
+
+        TUYA_BLE_LOG_DEBUG("save flash_settings_auth data start erase data to TUYA_BLE_AUTH_FLASH_ADDR, current sn = %d ,data addr = 0x%08x.",((p_data[0]<<8)+p_data[1]),p_data);
+
+    }
+
+}
+
+/*********************************************************************************************************************************************
+
+**********************************************************************************************************************************************/
 
 static bool buffer_value_is_all_x(uint8_t *buffer,uint16_t len,uint8_t value)
 {
@@ -97,9 +492,9 @@ static uint32_t auth_settings_crc_get(tuya_ble_auth_settings_t const * p_setting
     return tuya_ble_crc32_compute((uint8_t*)(p_settings) + 4, sizeof(tuya_ble_auth_settings_t) - 4, NULL);
 }
 
-static bool auth_settings_crc_ok(tuya_ble_auth_settings_t const * p_settings,uint8_t *flash_update)
+static bool auth_settings_crc_ok(tuya_ble_auth_settings_t const * p_settings)
 {
-    uint32_t crc,crc_old;
+    uint32_t crc;
     if (p_settings->crc != 0xFFFFFFFF)
     {
         // CRC is set. Content must be valid
@@ -107,15 +502,6 @@ static bool auth_settings_crc_ok(tuya_ble_auth_settings_t const * p_settings,uin
         if (crc == p_settings->crc)
         {
             return true;
-        }
-        else
-        {
-            crc_old = tuya_ble_crc32_compute((uint8_t*)(p_settings) + 4, sizeof(tuya_ble_auth_settings_old_t) - 4, NULL);
-            if(crc_old == p_settings->crc)
-            {
-                *flash_update = 1;
-                return true;
-            }
         }
     }
     return false;
@@ -130,9 +516,9 @@ static uint32_t sys_settings_crc_get(tuya_ble_sys_settings_t const * p_settings)
 
 
 
-static bool sys_settings_crc_ok(tuya_ble_sys_settings_t  const* p_settings,uint8_t *flash_update)
+static bool sys_settings_crc_ok(tuya_ble_sys_settings_t  const* p_settings)
 {
-    uint32_t crc,crc_old;
+    uint32_t crc;
     if (p_settings->crc != 0xFFFFFFFF)
     {
         // CRC is set. Content must be valid
@@ -141,282 +527,133 @@ static bool sys_settings_crc_ok(tuya_ble_sys_settings_t  const* p_settings,uint8
         {
             return true;
         }
-        else
-        {
-            crc_old = tuya_ble_crc32_compute((uint8_t*)(p_settings) + 4, sizeof(tuya_ble_sys_settings_old_t) - 4, NULL);
-            if(crc_old == p_settings->crc)
-            {
-                *flash_update = 1;
-                return true;
-            }
-        }
     }
     return false;
 }
 
 
-uint32_t tuya_ble_storage_load_settings(void)
+/*********************************************************************************************************************************************
+tuya_ble_storage_init_async:
+**********************************************************************************************************************************************/
+
+static void tuya_ble_storage_init_async_read_settings_sys_backup_completed(void * p_param,tuya_ble_status_t result)
 {
-    //uint8_t id_null[AUTH_KEY_LEN] = {0};
-    uint32_t err_code = 0;
     bool settings_valid ;
     bool settings_backup_valid;
-    uint8_t auth_settings_flag = 1;
-    uint8_t sys_settings_flag = 1;
-    uint8_t auth_settings_update = 0;
-    uint8_t sys_settings_update = 0;
-    tuya_ble_storage_auth_settings_t *p_storage_settings_auth = NULL;
-    tuya_ble_storage_sys_settings_t *p_storage_settings_sys = NULL;
 
-    p_storage_settings_auth = (tuya_ble_storage_auth_settings_t*)tuya_ble_malloc(sizeof(tuya_ble_storage_auth_settings_t));
-
-    if(p_storage_settings_auth==NULL)
+    if (result == TUYA_BLE_SUCCESS)
     {
-        TUYA_BLE_LOG_ERROR("p_storage_settings_auth malloc failed.");
-        memset(&tuya_ble_current_para.auth_settings,0,sizeof(tuya_ble_auth_settings_t));
-        auth_settings_flag = 0;
-    }
-    else
-    {
-        memset(p_storage_settings_auth,0,sizeof(tuya_ble_storage_auth_settings_t));
-    }
-
-    if(auth_settings_flag==1)
-    {
-        tuya_ble_nv_read(TUYA_BLE_AUTH_FLASH_ADDR,(uint8_t *)&p_storage_settings_auth->flash_settings_auth,sizeof(tuya_ble_auth_settings_t));
-        tuya_ble_nv_read(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,(uint8_t *)&p_storage_settings_auth->flash_settings_auth_backup,sizeof(tuya_ble_auth_settings_t));
-
-        settings_valid = auth_settings_crc_ok(&p_storage_settings_auth->flash_settings_auth,&auth_settings_update);
-        settings_backup_valid = auth_settings_crc_ok(&p_storage_settings_auth->flash_settings_auth_backup,&auth_settings_update);
+        settings_valid = sys_settings_crc_ok(&read_storage_settings_sys.flash_settings_sys);
+        settings_backup_valid = sys_settings_crc_ok(&read_storage_settings_sys.flash_settings_sys_backup);
 
         if(settings_valid)
         {
-            memcpy(&tuya_ble_current_para.auth_settings,&p_storage_settings_auth->flash_settings_auth,sizeof(tuya_ble_auth_settings_t));
+            memcpy(&tuya_ble_current_para.sys_settings,&read_storage_settings_sys.flash_settings_sys,sizeof(tuya_ble_sys_settings_t));
         }
         else if(settings_backup_valid)
         {
-            memcpy(&tuya_ble_current_para.auth_settings,&p_storage_settings_auth->flash_settings_auth_backup,sizeof(tuya_ble_auth_settings_t));
-        }
-        else
-        {
-            memset(&tuya_ble_current_para.auth_settings,0,sizeof(tuya_ble_auth_settings_t));
-            auth_settings_flag = 0;
-        }
-        if(auth_settings_update==1)
-        {
-            tuya_ble_storage_save_auth_settings();
-            auth_settings_update = 0;
-        }
-
-        tuya_ble_free((uint8_t *)p_storage_settings_auth);
-
-    }
-
-    p_storage_settings_sys = (tuya_ble_storage_sys_settings_t*)tuya_ble_malloc(sizeof(tuya_ble_storage_sys_settings_t));
-
-    if(p_storage_settings_sys==NULL)
-    {
-        TUYA_BLE_LOG_ERROR("p_storage_settings_sys malloc failed.");
-        memset(&tuya_ble_current_para.sys_settings,0,sizeof(tuya_ble_sys_settings_t));
-        sys_settings_flag = 0;
-    }
-    else
-    {
-        memset(p_storage_settings_sys,0,sizeof(tuya_ble_storage_sys_settings_t));
-    }
-
-    if(sys_settings_flag==1)
-    {
-        tuya_ble_nv_read(TUYA_BLE_SYS_FLASH_ADDR,(uint8_t *)&p_storage_settings_sys->flash_settings_sys,sizeof(tuya_ble_sys_settings_t));
-        tuya_ble_nv_read(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,(uint8_t *)&p_storage_settings_sys->flash_settings_sys_backup,sizeof(tuya_ble_sys_settings_t));
-
-        settings_valid = sys_settings_crc_ok(&p_storage_settings_sys->flash_settings_sys ,&sys_settings_update);
-        settings_backup_valid = sys_settings_crc_ok(&p_storage_settings_sys->flash_settings_sys_backup,&sys_settings_update);
-
-        if(settings_valid)
-        {
-            memcpy(&tuya_ble_current_para.sys_settings,&p_storage_settings_sys->flash_settings_sys,sizeof(tuya_ble_sys_settings_t));
-        }
-        else if(settings_backup_valid)
-        {
-            memcpy(&tuya_ble_current_para.sys_settings,&p_storage_settings_sys->flash_settings_sys_backup,sizeof(tuya_ble_sys_settings_t));
+            memcpy(&tuya_ble_current_para.sys_settings,&read_storage_settings_sys.flash_settings_sys_backup,sizeof(tuya_ble_sys_settings_t));
         }
         else
         {
             memset(&tuya_ble_current_para.sys_settings,0,sizeof(tuya_ble_sys_settings_t));
             tuya_ble_current_para.sys_settings.factory_test_flag = 0xFF;
-            sys_settings_flag = 0;
         }
 
-        if(sys_settings_update==1)
-        {
-            tuya_ble_current_para.sys_settings.factory_test_flag = 0xFF;
-            tuya_ble_storage_save_sys_settings();
-            sys_settings_update = 0;
-        }
-
-        tuya_ble_free((uint8_t *)p_storage_settings_sys);
-
-    }
-
-    if((auth_settings_flag==0)&&(sys_settings_flag!=0))
-    {
-        memset(&tuya_ble_current_para.sys_settings,0,sizeof(tuya_ble_sys_settings_t));
-        tuya_ble_current_para.sys_settings.factory_test_flag = 0xFF;
-        //tuya_ble_storage_save_sys_settings();
-    }
-
-    tuya_ble_current_para.pid_type = tuya_ble_current_para.sys_settings.pid_type;
-    tuya_ble_current_para.pid_len = tuya_ble_current_para.sys_settings.pid_len;
-    memcpy(tuya_ble_current_para.pid,tuya_ble_current_para.sys_settings.common_pid,tuya_ble_current_para.pid_len);
-
-
-    return err_code;
-}
-
-
-uint32_t tuya_ble_storage_save_auth_settings(void)
-{
-    uint32_t err_code=0;
-    //memcpy(&flash_settings_auth,&tuya_ble_current_para.auth_settings,sizeof(tuya_ble_auth_settings_t));
-
-    tuya_ble_current_para.auth_settings.crc = tuya_ble_crc32_compute((uint8_t *)&tuya_ble_current_para.auth_settings+4,sizeof(tuya_ble_current_para.auth_settings)-4,NULL);
-
-
-    if(tuya_ble_nv_erase(TUYA_BLE_AUTH_FLASH_ADDR,TUYA_NV_ERASE_MIN_SIZE)==TUYA_BLE_SUCCESS)
-    {
-        err_code = tuya_ble_nv_write(TUYA_BLE_AUTH_FLASH_ADDR,(uint8_t *)&tuya_ble_current_para.auth_settings,sizeof(tuya_ble_auth_settings_t));
-
-        if(err_code == TUYA_BLE_SUCCESS)
-        {
-            TUYA_BLE_LOG_DEBUG("write flash_settings_auth data succeed!");
-
-            if(tuya_ble_nv_erase(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,TUYA_NV_ERASE_MIN_SIZE)==TUYA_BLE_SUCCESS)
-            {
-                if(tuya_ble_nv_write(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,(uint8_t *)&tuya_ble_current_para.auth_settings,sizeof(tuya_ble_auth_settings_t))!=TUYA_BLE_SUCCESS)
-                {
-                    TUYA_BLE_LOG_ERROR("write flash_settings_auth data backup failed!");
-                    err_code = 1;
-                }
-            }
-            else
-            {
-                TUYA_BLE_LOG_ERROR("erase flash_settings_auth data backup failed!");
-                err_code = 1;
-            }
-        }
-        else
-        {
-            TUYA_BLE_LOG_ERROR("write flash_settings_auth data failed!");
-            err_code = 1;
-        }
+        storage_init_complete(p_param,TUYA_BLE_SUCCESS);
+        tuya_ble_storage_init_flag = 0;
     }
     else
     {
-        TUYA_BLE_LOG_ERROR("erase flash_settings_auth data failed!");
-        err_code = 1;
+        storage_init_complete(p_param,TUYA_BLE_ERR_INTERNAL);
+        tuya_ble_storage_init_flag = 0;
     }
-    return err_code;
 }
 
-uint32_t tuya_ble_storage_save_sys_settings(void)
+static void tuya_ble_storage_init_async_read_settings_sys_completed(void * p_param,tuya_ble_status_t result)
 {
-    uint32_t err_code=0;
 
-#if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
-
-    // static flash_sys_settings_t flash_settings_sys;
-    //memcpy(&flash_settings_sys,&tuya_ble_current_para.sys_settings,sizeof(tuya_ble_sys_settings_t));
-
-    tuya_ble_current_para.sys_settings.crc = tuya_ble_crc32_compute((uint8_t *)&tuya_ble_current_para.sys_settings+4,sizeof(tuya_ble_sys_settings_t)-4,NULL);
-
-    if(tuya_ble_nv_erase(TUYA_BLE_SYS_FLASH_ADDR,TUYA_NV_ERASE_MIN_SIZE)==TUYA_BLE_SUCCESS)
+    if (result == TUYA_BLE_SUCCESS)
     {
-        err_code = tuya_ble_nv_write(TUYA_BLE_SYS_FLASH_ADDR,(uint8_t *)&tuya_ble_current_para.sys_settings,sizeof(tuya_ble_sys_settings_t));
-
-        if(err_code == TUYA_BLE_SUCCESS)
-        {
-            TUYA_BLE_LOG_INFO("write flash_settings_sys data succeed!");
-
-            if(tuya_ble_nv_erase(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,TUYA_NV_ERASE_MIN_SIZE)==TUYA_BLE_SUCCESS)
-            {
-                if(tuya_ble_nv_write(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,(uint8_t *)&tuya_ble_current_para.sys_settings,sizeof(tuya_ble_sys_settings_t))!=TUYA_BLE_SUCCESS)
-                {
-                    TUYA_BLE_LOG_ERROR("write flash_settings_sys data backup failed!");
-                    err_code = 1;
-                }
-            }
-            else
-            {
-                TUYA_BLE_LOG_ERROR("erase flash_settings_sys data backup failed!");
-                err_code = 1;
-            }
-
-        }
-        else
-        {
-            TUYA_BLE_LOG_ERROR("write flash_settings_sys data failed!");
-            err_code = 1;
-        }
+        tuya_ble_nv_read_async(TUYA_BLE_SYS_FLASH_BACKUP_ADDR,(uint8_t *)&read_storage_settings_sys.flash_settings_sys_backup,sizeof(tuya_ble_sys_settings_t)
+                               ,p_param,tuya_ble_storage_init_async_read_settings_sys_backup_completed);
     }
     else
     {
-        TUYA_BLE_LOG_ERROR("erase flash_settings_sys data failed!");
-        err_code = 1;
+        storage_init_complete(p_param,TUYA_BLE_ERR_INTERNAL);
+        tuya_ble_storage_init_flag = 0;
     }
-#endif
+}
 
-    return err_code;
+static void tuya_ble_storage_init_async_read_settings_auth_backup_completed(void * p_param,tuya_ble_status_t result)
+{
+    bool settings_valid ;
+    bool settings_backup_valid;
+
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        settings_valid = auth_settings_crc_ok(&read_storage_settings_auth.flash_settings_auth);
+        settings_backup_valid = auth_settings_crc_ok(&read_storage_settings_auth.flash_settings_auth_backup);
+
+        if(settings_valid)
+        {
+            memcpy(&tuya_ble_current_para.auth_settings,&read_storage_settings_auth.flash_settings_auth,sizeof(tuya_ble_auth_settings_t));
+        }
+        else if(settings_backup_valid)
+        {
+            memcpy(&tuya_ble_current_para.auth_settings,&read_storage_settings_auth.flash_settings_auth_backup,sizeof(tuya_ble_auth_settings_t));
+        }
+        else
+        {
+            memset(&tuya_ble_current_para.auth_settings,0,sizeof(tuya_ble_auth_settings_t));
+        }
+
+        tuya_ble_nv_read_async(TUYA_BLE_SYS_FLASH_ADDR,(uint8_t *)&read_storage_settings_sys.flash_settings_sys,sizeof(tuya_ble_sys_settings_t)
+                               ,p_param,tuya_ble_storage_init_async_read_settings_sys_completed);
+    }
+    else
+    {
+        storage_init_complete(p_param,TUYA_BLE_ERR_INTERNAL);
+        tuya_ble_storage_init_flag = 0;
+    }
+}
+
+static void tuya_ble_storage_init_async_read_settings_auth_completed(void * p_param,tuya_ble_status_t result)
+{
+    if (result == TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_nv_read_async(TUYA_BLE_AUTH_FLASH_BACKUP_ADDR,(uint8_t *)&read_storage_settings_auth.flash_settings_auth_backup,sizeof(tuya_ble_auth_settings_t)
+                               ,p_param,tuya_ble_storage_init_async_read_settings_auth_backup_completed);
+    }
+    else
+    {
+        storage_init_complete(p_param,TUYA_BLE_ERR_INTERNAL);
+        tuya_ble_storage_init_flag = 0;
+    }
 }
 
 
-
-uint32_t tuya_ble_storage_init(void)
+void tuya_ble_storage_init_async(void *p_param,tuya_ble_nv_async_callback_t callback)
 {
-    uint32_t err=0;
-    tuya_ble_gap_addr_t bt_addr;
-    uint8_t mac_temp[6];
+    if(tuya_ble_storage_init_flag)
+    {
+        return;
+    }
+    else
+    {
+        tuya_ble_storage_init_flag = 1;
+    }
 
+    storage_init_complete = callback;
     tuya_ble_nv_init();
 
-#if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
+    memset(&read_storage_settings_auth,0,sizeof(tuya_ble_storage_auth_settings_t));
+    tuya_ble_nv_read_async(TUYA_BLE_AUTH_FLASH_ADDR,(uint8_t *)&read_storage_settings_auth.flash_settings_auth,sizeof(tuya_ble_auth_settings_t)
+                           ,p_param,tuya_ble_storage_init_async_read_settings_auth_completed);
 
-    tuya_ble_storage_load_settings();
-
-    if(tuya_ble_gap_addr_get(&bt_addr)==TUYA_BLE_SUCCESS)
-    {
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("current bt addr : ",bt_addr.addr,6);
-        memcpy(mac_temp,tuya_ble_current_para.auth_settings.mac,6);
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("current auth_settings->mac : ",mac_temp,6);
-        //tuya_ble_inverted_array(mac_temp,6);
-        if((!tuya_ble_buffer_value_is_all_x(mac_temp,6,0))&&(memcmp(mac_temp,bt_addr.addr,6)))
-        {
-            bt_addr.addr_type = TUYA_BLE_ADDRESS_TYPE_RANDOM;
-            memcpy(bt_addr.addr,mac_temp,6);
-            if(tuya_ble_gap_addr_set(&bt_addr)!=TUYA_BLE_SUCCESS)
-            {
-                TUYA_BLE_LOG_ERROR("GAP ADDR SET failed!");
-            }
-            else
-            {
-                TUYA_BLE_LOG_DEBUG("GAP ADDR SET SUCCESSED!");
-                if(TUYA_BLE_DEVICE_MAC_UPDATE_RESET)
-                {
-                     tuya_ble_device_delay_ms(500);
-                     tuya_ble_device_reset();                    
-                }
-            }
-        }
-    }
-    else
-    {
-        TUYA_BLE_LOG_WARNING("GAP ADDR GET failed!");
-    }
-
-
-#endif
-    return err;
 }
+
+
 
 #if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
 /**
@@ -425,14 +662,15 @@ uint32_t tuya_ble_storage_init(void)
  * @note
  *
  * */
-tuya_ble_status_t tuya_ble_storage_write_pid(tuya_ble_product_id_type_t pid_type,uint8_t pid_len,uint8_t *pid)
+void tuya_ble_storage_write_pid_async(tuya_ble_product_id_type_t pid_type,uint8_t pid_len,uint8_t *pid,tuya_ble_nv_async_callback_t callback)
 {
-    tuya_ble_status_t ret = TUYA_BLE_SUCCESS;
     uint8_t is_write = 0;
 
     if(pid_len>TUYA_BLE_PRODUCT_ID_MAX_LEN)
     {
-        return TUYA_BLE_ERR_INVALID_PARAM;
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_INVALID_PARAM);
+        return;
     }
 
     if((pid_type!=tuya_ble_current_para.pid_type)||(pid_len!=tuya_ble_current_para.pid_len))
@@ -461,13 +699,14 @@ tuya_ble_status_t tuya_ble_storage_write_pid(tuya_ble_product_id_type_t pid_type
     }
     if(is_write==1)
     {
-        if(tuya_ble_storage_save_sys_settings())
-        {
-            ret = TUYA_BLE_ERR_BUSY;
-        }
+        tuya_ble_storage_save_sys_settings_async(callback);
+    }
+    else
+    {
+        if(callback)
+            callback(NULL,TUYA_BLE_SUCCESS);
     }
 
-    return ret;
 }
 
 
@@ -477,27 +716,29 @@ tuya_ble_status_t tuya_ble_storage_write_pid(tuya_ble_product_id_type_t pid_type
  * @note
  *
  * */
-tuya_ble_status_t tuya_ble_storage_write_hid(uint8_t *hid,uint8_t len)
+void tuya_ble_storage_write_hid_async(uint8_t *hid,uint8_t len,tuya_ble_nv_async_callback_t callback)
 {
-    tuya_ble_status_t ret = TUYA_BLE_SUCCESS;
 
     if(len!=H_ID_LEN)
     {
-        ret = TUYA_BLE_ERR_INVALID_PARAM;
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_INVALID_PARAM);
+        return;
     }
     else
     {
         if(memcmp(hid,tuya_ble_current_para.auth_settings.h_id,H_ID_LEN)!=0)
         {
             memcpy(tuya_ble_current_para.auth_settings.h_id,hid,H_ID_LEN);
-            if(tuya_ble_storage_save_auth_settings())
-            {
-                ret = TUYA_BLE_ERR_BUSY;
-            }
+            tuya_ble_storage_save_auth_settings_async(callback);
+        }
+        else
+        {
+            if(callback)
+                callback(NULL,TUYA_BLE_SUCCESS);
         }
     }
 
-    return ret;
 }
 
 /**
@@ -523,21 +764,73 @@ tuya_ble_status_t tuya_ble_storage_read_id_info(tuya_ble_factory_id_data_t *id)
 }
 
 
+static tuya_ble_nv_async_callback_t tuya_ble_storage_write_auth_key_device_id_mac_async_callback = NULL;
+
+
+
+static void tuya_ble_storage_write_auth_key_device_id_mac_async_update_sys_completed(void *p_param,tuya_ble_status_t result)
+{
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_adv_change();
+        tuya_ble_connect_status_set(UNBONDING_UNCONN);
+        TUYA_BLE_LOG_INFO("The state has changed, current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+    }
+    if(tuya_ble_storage_write_auth_key_device_id_mac_async_callback)
+    {
+        tuya_ble_storage_write_auth_key_device_id_mac_async_callback(NULL,result);
+        tuya_ble_storage_write_auth_key_device_id_mac_async_callback = NULL;
+    }
+}
+
+
+static void tuya_ble_storage_write_auth_key_device_id_mac_async_completed(void *p_param,tuya_ble_status_t result)
+{
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        if(tuya_ble_current_para.sys_settings.bound_flag==1)
+        {
+            memset(tuya_ble_current_para.sys_settings.device_virtual_id,0,DEVICE_VIRTUAL_ID_LEN);
+            memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+            tuya_ble_current_para.sys_settings.bound_flag= 0;
+            tuya_ble_storage_save_sys_settings_async(tuya_ble_storage_write_auth_key_device_id_mac_async_update_sys_completed);
+
+        }
+        else
+        {
+            if(tuya_ble_storage_write_auth_key_device_id_mac_async_callback)
+            {
+                tuya_ble_storage_write_auth_key_device_id_mac_async_callback(NULL,TUYA_BLE_SUCCESS);
+                tuya_ble_storage_write_auth_key_device_id_mac_async_callback = NULL;
+            }
+        }
+    }
+    else
+    {
+        if(tuya_ble_storage_write_auth_key_device_id_mac_async_callback)
+        {
+            tuya_ble_storage_write_auth_key_device_id_mac_async_callback(NULL,result);
+            tuya_ble_storage_write_auth_key_device_id_mac_async_callback = NULL;
+        }
+    }
+}
 /**
  * @brief   Function for write auth key/uuid/mac
  *
  * @note  If the id length is 0, the corresponding id will not be written.
  *
  * */
-tuya_ble_status_t tuya_ble_storage_write_auth_key_device_id_mac(uint8_t *auth_key,uint8_t auth_key_len,uint8_t *device_id,uint8_t device_id_len,
-        uint8_t *mac,uint8_t mac_len,uint8_t *mac_string,uint8_t mac_string_len)
+void tuya_ble_storage_write_auth_key_device_id_mac_async(uint8_t *auth_key,uint8_t auth_key_len,uint8_t *device_id,uint8_t device_id_len,
+        uint8_t *mac,uint8_t mac_len,uint8_t *mac_string,uint8_t mac_string_len,tuya_ble_nv_async_callback_t callback)
 {
     tuya_ble_status_t ret = TUYA_BLE_SUCCESS;
     uint8_t is_write = 0;
 
     if(((auth_key_len!=AUTH_KEY_LEN)&&(auth_key_len!=0))||((device_id_len!=DEVICE_ID_LEN)&&(device_id_len!=0))||((mac_len!=MAC_LEN)&&(mac_len!=0)))
     {
-        ret = TUYA_BLE_ERR_INVALID_PARAM;
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_INVALID_PARAM);
+        return;
     }
     else
     {
@@ -569,15 +862,27 @@ tuya_ble_status_t tuya_ble_storage_write_auth_key_device_id_mac(uint8_t *auth_ke
 
         if(is_write==1)
         {
-            if(tuya_ble_storage_save_auth_settings())
-            {
-                ret = TUYA_BLE_ERR_BUSY;
-            }
+            tuya_ble_storage_write_auth_key_device_id_mac_async_callback = callback;
+            tuya_ble_storage_save_auth_settings_async(tuya_ble_storage_write_auth_key_device_id_mac_async_completed);
+        }
+        else
+        {
+            if(callback)
+                callback(NULL,TUYA_BLE_SUCCESS);
         }
 
     }
 
-    return ret;
 }
 
 #endif
+
+
+
+
+
+
+
+
+
+

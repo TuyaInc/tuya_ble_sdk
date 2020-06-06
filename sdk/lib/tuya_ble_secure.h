@@ -51,9 +51,12 @@ uint8_t  tuya_ble_encrypt_old_with_key(uint8_t *key,uint8_t *in_buf,uint8_t in_l
 
 bool tuya_ble_device_id_encrypt(uint8_t *key_in,uint16_t key_len,uint8_t *input,uint16_t input_len,uint8_t *output);
 
+bool tuya_ble_device_id_decrypt(uint8_t *key_in,uint16_t key_len,uint8_t *input,uint16_t input_len,uint8_t *output);
+
 uint8_t tuya_ble_decryption(uint8_t const *in_buf,uint32_t in_len,uint32_t *out_len,uint8_t *out_buf,tuya_ble_parameters_settings_t *current_para_data,uint8_t *dev_rand);
 
 void tuya_ble_event_process(tuya_ble_evt_param_t *tuya_ble_evt);
+
 
 #ifdef __cplusplus
 }

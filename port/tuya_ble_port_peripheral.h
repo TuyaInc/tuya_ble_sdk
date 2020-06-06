@@ -29,8 +29,6 @@
 
 #include "tuya_ble_stdlib.h"
 #include "tuya_ble_type.h"
-//#include "tuya_ble_config.h"
-
 
 
 

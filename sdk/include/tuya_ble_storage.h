@@ -28,23 +28,23 @@
 #include "tuya_ble_type.h"
 #include "tuya_ble_internal_config.h"
 
-uint32_t tuya_ble_storage_save_sys_settings(void);
+void tuya_ble_storage_save_sys_settings_async(tuya_ble_nv_async_callback_t callback);
 
-uint32_t tuya_ble_storage_save_auth_settings(void);
+void tuya_ble_storage_save_auth_settings_async(tuya_ble_nv_async_callback_t callback);
 
-uint32_t tuya_ble_storage_init(void);
+void tuya_ble_storage_init_async(void *p_param,tuya_ble_nv_async_callback_t callback);
 
 
 #if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
 
-tuya_ble_status_t tuya_ble_storage_write_pid(tuya_ble_product_id_type_t pid_type,uint8_t pid_len,uint8_t *pid);
+void tuya_ble_storage_write_pid_async(tuya_ble_product_id_type_t pid_type,uint8_t pid_len,uint8_t *pid,tuya_ble_nv_async_callback_t callback);
 
-tuya_ble_status_t tuya_ble_storage_write_hid(uint8_t *hid,uint8_t len);
+void tuya_ble_storage_write_hid_async(uint8_t *hid,uint8_t len,tuya_ble_nv_async_callback_t callback);
 
 tuya_ble_status_t tuya_ble_storage_read_id_info(tuya_ble_factory_id_data_t *id);
 
-tuya_ble_status_t tuya_ble_storage_write_auth_key_device_id_mac(uint8_t *auth_key,uint8_t auth_key_len,uint8_t *device_id,uint8_t device_id_len,
-uint8_t *mac,uint8_t mac_len,uint8_t *mac_string,uint8_t mac_string_len);
+void tuya_ble_storage_write_auth_key_device_id_mac_async(uint8_t *auth_key,uint8_t auth_key_len,uint8_t *device_id,uint8_t device_id_len,
+        uint8_t *mac,uint8_t mac_len,uint8_t *mac_string,uint8_t mac_string_len,tuya_ble_nv_async_callback_t callback);
 
 #endif
 

@@ -1,69 +1,103 @@
-# tuya ble sdk介绍
+# tuya ble sdk
 
-## 总体描述
+The tuya ble sdk encapsulates the communication protocol with Tuya Smart mobile App and implements a event scheduling abilities. The device using tuya ble sdk does not need to care about the specific communication protocol implementation details. It can be interconnected with Tuya Smart App by calling the API and call back provided by the tuya ble sdk.
 
-TUYA BLE SDK主要封装了和涂鸦智能手机APP之间的通信协议以及实现了简易事件调度机制，使用该SDK的设备无须关心具体的通信协议实现细节，通过调用SDK提供的API和Call Back即可与APP互联互通。
+This topic gives details of the components, porting instruction, SDK configuration, API description, and usage of tuya ble sdk.
 
-## 系统架构
+## Overview of tuya ble sdk
 
-![](https://i.imgur.com/0Iu4AgI.png)
+### Framework
 
-## 模块介绍
+The following figure shows the Application framework based on tuya ble sdk:
 
-- Platform：
-所使用的芯片平台，芯片+协议栈由芯片公司维护。
+![clip_image002.png](https://airtake-public-data.oss-cn-hangzhou.aliyuncs.com/goat/20200310/4de0b2ed979d4b5593ee00f2793ca99b.png)
 
-- Port：TUYA BLE SDK所需要的接口抽象，需要用户根据具体的芯片平台移植实现。
+- platform: the chip platform. The chip and protocol stack are maintained by the chip company.
 
-- Tuya ble sdk：sdk封装了涂鸦ble通信协议，提供构建涂鸦ble应用所需的服务接口。
+- Port: the abstract interfaces needed by the  tuya ble sdk. You must implement them according to the chip-specific platform.
 
-- Application：基于tuya ble sdk构建的应用。
+- tuya ble sdk: encapsulates the communication protocol of Tuya BLE and provides the service interface to develop Tuya BLE devices.
 
-- Tuya ble sdk API：SDK提供相关API用于设备实现BLE相关的管理、通信等，如果使用OS，API的调用将采用基于消息的异步机制，API的执行结果将会以message或者call back的方式通知给设备的application，如果是非OS，API的返回值即为执行结果。
+- Application: your application, built by using tuya ble sdk.
 
-- Sdk config：SDK可裁剪可配置，通过config文件中的宏定义操作，例如配置SDK适用于多协议设备的通用配网模式，蓝牙单点设备、基于ECDH秘钥协商加密模式、是否使用OS等。
+- Tuya sdk API: to implement BLE related management, communication, and so forth. The calls of API are based on asynchronous messages, and the result of API will be notified to the Application of device by message or call back.
 
-- Main process function：
-为SDK的主引擎，设备application需要一直调用，如果platform基于OS，SDK会基于port层提供的OS相关api自动创建一个任务用于执行Main process function，如果是非OS平台，需要设备application循环调用。
+- sdk config: by setting the macro in the configuration file, you can configure tuya ble sdk to different modes, for example, the general network configuration mode applicable to multi-protocol devices, Bluetooth singlepoint devices mode, ECDH key based encryption method, whether to use OS, and so forth.
 
-- Message or Call Back：
-SDK通过message或者设备app注册的call back函数向设备APP发送数据（状态、数据等）。
+- Main process function: as the engine of tuya ble sdk, to which the Application will call all the time. If the platform architecture has an OS, The tuya ble sdk will automatically create a task to run the main process based on the OS related interface provided by the port layer. If the platform does not have an OS, the device Application needs to be called circularly.
 
-## OS支持
+- Message or Call back: SDK sends the data of status, data, and others to device Application through call back function registered by device Application or messages.
 
-TUYA BLE SDK可运行在基于RTOS的芯片平台下（linux暂不支持）。如果使用RTOS，API的调用将采用基于消息的异步机制，初始化SDK时，SDK将会根据tuya\_ble\_config.h文件的相关配置自动创建一个任务或者使用用户提供的task用于处理SDK的核心逻辑，同时自动创建一个消息队列或者使用移植的消息队列用于接收API的执行请求，API的执行结果也将会以message的方式通知给设备的application，所以用户application需要创建一个消息队列并在调用tuya\_ble\_sdk\_init()后调用tuya\_ble\_callback\_queue\_register()将消息队列注册至SDK中。
+### OS compatibility
 
-## 事件队列
+The tuya ble sdk can run on OS based chip platform other than Linux. If an OS is used, the API requests are based on asynchronous messages. When tuya ble sdk is initialized, the SDK automatically creates a task based on '`tuya_ble_config.h` file to process the message events of the SDK, and creates a message queue to receive the responses of the Application API. The results of the API are notified to the Application of the device in the form of message, so your Application needs to create a message queue and call `tuya_ble_callback_queue_register()` after calling `tuya_ble_sdk_init()` or `tuya_ble_sdk_init_async()` to register the message queue to the SDK.
 
-先进先出，用于缓存设备application以及platform层发送来消息事件（api调用、ble底层数据接收等），Main process function模块循环查询消息队列并取出处理。
+In the chip platform that has an OS, you can also configure the tuya ble sdk to process messages using the task provided by Application instead of tasks within the tuya ble sdk. By doing so, the Application must implement the outbound message interface at the port layer. 
 
-## SDK目录
+### Event queue
 
-![](https://i.imgur.com/R1mt7Q9.png)
+The earlier event takes precedence to leave (FIFO). Event queue caches the messages sent by the Application and platform layer, the event can be API calls, data response from BLE devices, and so forth. The main process function module circularly queries the message queue and takes it out for processing.
 
-- Application：	存放sdk提供的各应用示例demo。
-- doc：	说明文档。
-- modules：	功能抽象模块。
-- port：	各平台移植代码。
-- sdk：	tuya ble sdk核心代码。
-- tuya\_ble\_config.h：	ble sdk配置文件。
-- tuya\_ble\_sdk\_version.h：	sdk版本.h文件。
-- tuya\_ble\_sdk\_version.txt：	sdk版本说明文件。
+### Directories
 
-## TUYA BLE SERVICE
+| **Directory**               | **Description**                                              |
+| --------------------------- | ------------------------------------------------------------ |
+| app                         | Stores Applications that managed by the tuya ble sdk, such as Tuya test and production module, general connection modules and so forth. |
+| doc                         | Help file.                                                   |
+| extern\_components          | External components, for example, the extension for security-specific algorithm. |
+| port                        | The abstract interfaces which must be implemented by Applications. |
+| sdk                         | The core code of the tuya ble sdk.                           |
+| tuya\_ble\_config.h         | The configuration file for tuya ble sdk. However, your Application needs to create another configuration files on demand. |
+| tuya\_ble\_sdk\_version.h   | The version file.                                            |
+| README.md                   | A brief introduction of the tuya ble sdk.                    |
+| tuya\_ble\_sdk\_version.txt | Explains what are updated for each version in Chinese.       |
+| CHANGELOG.md                | Explains what are updated for each version in English.       |
 
-Tuya ble sdk不提供初始化service相关接口，Application需要在初始化sdk前实现下图所定义的sevice characteristics，否则sdk将不能正常工作。
-![](https://i.imgur.com/LLITQqU.png)
+## The concepts of tuya ble service
+
+The tuya ble sdk does not provide the interfaces for initializing service. Your Application needs to implement the service characteristics defined in the following table before you initializing the SDK. Other than the services required by the tuya ble sdk, you can also define other services if needed. The initial format of broadcast data must be implemented according to the following table, otherwise the tuya ble sdk cannot work.
+
+| **Service UUID** | **Characteristic UUID** | **Properties**                | **Security Permissions** |
+| ---------------- | ----------------------- | ----------------------------- | ------------------------ |
+| 1910             | 2b10                    | Notify                        | None.                    |
+|                  | 2b11                    | Write,write without response. | None.                    |
 
 
-## TUYA BLE 广播数据格式
+### The MTU
 
-sdk在初始化时会自动更新广播内容，但是为了保证多平台兼容性，Application在初始化tuya ble sdk之前的初始广播内容应按照下图所示的格式：
-![](https://i.imgur.com/srA7nIo.png)
+For a better compatibility, the ATT MTU used by tuya ble sdk is 23, and the GATT MTU (ATT DATA MAX) is 20. 
 
-## PORT
+### Broadcast data format
 
-如下图所示，tuya\_ble\_port.h和tuya\_ble\_port\_peripheral.h里定义的所有接口都需要用户根据具体的芯片平台移植实现，如果用户平台是非OS的，OS相关接口不需要实现。tuya\_ble\_port.c和tuya\_ble\_port\_peripheral.c是对tuya\_ble\_port.h和tuya\_ble\_port\_peripheral.h所定义接口的弱实现，用户不能在该文件里实现具体的平台接口，应该新建一个c文件，例如新建一个tuya\_ble\_port\_nrf52832.c文件。以平台名字命令的文件里是sdk已经适配移植好的平台实现，用户可以直接使用。
+The following picture illustrates the broadcast packet format of BLE.
 
-![](https://i.imgur.com/uJZUfYY.png)
+![](https://images.tuyacn.com/fe-static/docs/img/a48b425f-19e7-40c1-986e-11f082416b49.png)
 
+The following table describes what are contained in the broadcast packet.
+
+| Broadcast data segment                       | Type | Description                                                  |
+| -------------------------------------------- | ---- | ------------------------------------------------------------ |
+| Physical connection identifier of BLE device | 0x01 | Length: 0x02;Type: 0X01; Data: 0x16                          |
+| Service UUID                                 | 0x02 | Length: 0x03; Type: 0x02; Data: 0xA201                       |
+| Service Data                                 | 0x16 | Length: 0x0C or 0x14 <br>Type: 0x16<br/>Data: 0x01, 0xA2, type (0-pid,1-product_key)PID, or product_key (in 8 or 16 byte) |
+
+Example of 8 byte PID: ``02 01 05 03 02 01 A2 0C 16 01 A2 00 00 00 00 00 00 00 00 00``
+
+The following table describes what are contained in the scan response data.
+
+
+| Response data segment               | Type | Description                                                  |
+| ----------------------------------- | ---- | ------------------------------------------------------------ |
+| Complete Local Name                 | 0x09 | Length: 0x03; Type: 0x09; Date: 0x54 or 0x59                 |
+| Custom data defined by manufacturer | 0xff | Length: 0x19<br/>Type: 0xff <br/>Date: COMPANY ID:0x07D0<br/>FLAG: 0x00<br/>Protocol version: 0x03<br/>Encryption method: 0x00<br/>Communication capacity: 0x0000<br/>Reserved field: 0x00 |
+|                                     |      | ID field: 6 or 16 bytes                                      |
+
+Example of an unassociated devices: ``03 09 54 59 19 FF D0 07 00 0300 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00``
+
+## How to port and configure tuya ble sdk
+
+As the following picture shows, the interfaces defined in the file `tuya_ble_port.h` and `tuya_ble_port_peripheral.h` must be ported and implemented according to the chip-specific platform. Note that if the platform used in the Application does not have an OS, the OS related interfaces do not need to be implemented. The `tuya_ble_port.c` and `tuya_ble_port_peripheral.c` are the weak implementation of the interfaces defined for the `tuya_ble_port.h` and `tuya_ble_port_peripheral.h`.
+
+![image.png](https://airtake-public-data-1254153901.cos.ap-shanghai.myqcloud.com/goat/20200606/feac2f6cf3c847a7a0b12077b435fac3.png)
+
+You cannot implement platform-specific interfaces in the preceding `.c` files, please create a new one, for example `tuya_ble_port_nrf52832.c`. If the file name contains the keyword `tuya`, it is the platform implementation file that Tuya Smart has adapted and transplanted, you can refer to it if needed.

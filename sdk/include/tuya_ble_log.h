@@ -29,7 +29,7 @@
 #include "tuya_ble_internal_config.h"
 #include "tuya_ble_log_internal.h"
 
-#ifdef TUYA_BLE_LOG_ENABLED
+#if TUYA_BLE_LOG_ENABLE
 
 
 #ifndef TUYA_BLE_LOG_LEVEL
@@ -52,6 +52,7 @@
 #define TUYA_BLE_LOG_HEXDUMP_DEBUG(...)               TUYA_BLE_LOG_INTERNAL_HEXDUMP_DEBUG( __VA_ARGS__)
 
 #else 
+
 #define TUYA_BLE_LOG_ERROR(...)
 #define TUYA_BLE_LOG_WARNING(...)
 #define TUYA_BLE_LOG_INFO(...)
@@ -61,6 +62,43 @@
 #define TUYA_BLE_LOG_HEXDUMP_WARNING(...)     
 #define TUYA_BLE_LOG_HEXDUMP_INFO(...)       
 #define TUYA_BLE_LOG_HEXDUMP_DEBUG(...) 
+
+#endif // 
+
+
+#if TUYA_APP_LOG_ENABLE
+
+#ifndef TUYA_APP_LOG_LEVEL
+#define TUYA_APP_LOG_LEVEL              TUYA_APP_LOG_LEVEL_DEBUG
+#endif
+
+#ifndef TUYA_APP_LOG_COLORS_ENABLE
+#define TUYA_APP_LOG_COLORS_ENABLE      0
+#endif
+
+
+#define TUYA_APP_LOG_ERROR(...)                       TUYA_APP_LOG_INTERNAL_ERROR(__VA_ARGS__)
+#define TUYA_APP_LOG_WARNING(...)                     TUYA_APP_LOG_INTERNAL_WARNING( __VA_ARGS__)
+#define TUYA_APP_LOG_INFO(...)                        TUYA_APP_LOG_INTERNAL_INFO( __VA_ARGS__)
+#define TUYA_APP_LOG_DEBUG(...)                       TUYA_APP_LOG_INTERNAL_DEBUG( __VA_ARGS__)
+
+#define TUYA_APP_LOG_HEXDUMP_ERROR(...)               TUYA_APP_LOG_INTERNAL_HEXDUMP_ERROR(__VA_ARGS__)
+#define TUYA_APP_LOG_HEXDUMP_WARNING(...)             TUYA_APP_LOG_INTERNAL_HEXDUMP_WARNING( __VA_ARGS__)
+#define TUYA_APP_LOG_HEXDUMP_INFO(...)                TUYA_APP_LOG_INTERNAL_HEXDUMP_INFO( __VA_ARGS__)
+#define TUYA_APP_LOG_HEXDUMP_DEBUG(...)               TUYA_APP_LOG_INTERNAL_HEXDUMP_DEBUG( __VA_ARGS__)
+
+#else 
+
+#define TUYA_APP_LOG_ERROR(...)
+#define TUYA_APP_LOG_WARNING(...)
+#define TUYA_APP_LOG_INFO(...)
+#define TUYA_APP_LOG_DEBUG(...)
+
+#define TUYA_APP_LOG_HEXDUMP_ERROR(...)        
+#define TUYA_APP_LOG_HEXDUMP_WARNING(...)     
+#define TUYA_APP_LOG_HEXDUMP_INFO(...)       
+#define TUYA_APP_LOG_HEXDUMP_DEBUG(...) 
+
 #endif // 
 
 

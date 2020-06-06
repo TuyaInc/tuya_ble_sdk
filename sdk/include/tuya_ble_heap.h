@@ -98,9 +98,9 @@ void *pvTuyaPortMalloc( uint32_t xWantedSize );
 
 void vTuyaPortFree( void *pv );
 
-size_t xTuyaPortGetFreeHeapSize( void );
+uint32_t xTuyaPortGetFreeHeapSize( void );
 
-size_t xTuyaPortGetMinimumEverFreeHeapSize( void );
+uint32_t xTuyaPortGetMinimumEverFreeHeapSize( void );
 
 
 #endif

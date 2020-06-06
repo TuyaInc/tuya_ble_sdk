@@ -24,7 +24,6 @@
 
 #include "tuya_ble_port.h"
 #include "tuya_ble_type.h"
-//#include "tuya_ble_internal_config.h"
 
 
 

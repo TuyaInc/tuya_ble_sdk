@@ -136,8 +136,11 @@ void tuya_sched_execute(void);
  *
  * @return Amount of free space in the queue.
  */
+uint16_t tuya_ble_sched_queue_size_get(void); 
+ 
 uint16_t tuya_ble_sched_queue_space_get(void);
 
+uint16_t tuya_ble_sched_queue_events_get(void);
 
 void tuya_ble_event_queue_init(void);
 

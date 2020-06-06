@@ -48,8 +48,7 @@ static uint32_t tuya_ble_mcu_firmware_version = 0;
 static uint32_t tuya_ble_mcu_hardware_version = 0;
 
 
-static  tuya_ble_r_air_recv_packet  air_recv_packet;  
-//static  tuya_ble_r_air_send_packet  air_send_packet;
+static  tuya_ble_r_air_recv_packet  air_recv_packet;
 
 static frm_trsmitr_proc_s ty_trsmitr_proc;
 static frm_trsmitr_proc_s ty_trsmitr_proc_send;
@@ -60,11 +59,9 @@ uint8_t tuya_ble_pair_rand_valid = 0;
 static uint32_t tuya_ble_receive_sn = 0;
 static uint32_t tuya_ble_send_sn = 1;
 
-//extern uint8_t p_id[PRODUCT_ID_LEN];
 
 tuya_ble_ota_status_t tuya_ble_ota_status;
 
-//extern tuya_ble_parameters_settings_t tuya_ble_current_para;
 
 static uint32_t get_ble_send_sn(void)
 {
@@ -174,7 +171,7 @@ static uint32_t ble_data_unpack(uint8_t *buf,uint32_t len)
             tuya_ble_free(air_recv_packet.recv_data);
             air_recv_packet.recv_data = NULL;
         }
-        //memset(air_recv_packet.recv_data,0,TUYA_BLE_AIR_FRAME_MAX);
+
         return 1;
     }
 
@@ -238,51 +235,7 @@ static uint32_t ble_data_unpack(uint8_t *buf,uint32_t len)
         return 2;
     }
 }
-/*
-static uint32_t ble_data_unpack(uint8_t *buf,uint32_t len)
-{
-    static uint32_t offset = 0;
-    mtp_ret ret;
 
-    ret = trsmitr_recv_pkg_decode(&ty_trsmitr_proc, buf, len);
-    if(MTP_OK != ret && MTP_TRSMITR_CONTINUE != ret)
-    {
-        air_recv_packet.recv_len = 0;
-        memset(air_recv_packet.recv_data,0,TUYA_BLE_AIR_FRAME_MAX);
-        return 1;
-    }
-
-    if(FRM_PKG_FIRST == ty_trsmitr_proc.pkg_desc)
-    {
-        air_recv_packet.recv_len = 0;
-        memset(air_recv_packet.recv_data,0,TUYA_BLE_AIR_FRAME_MAX);
-        offset = 0;
-    }
-    if((offset+get_trsmitr_subpkg_len(&ty_trsmitr_proc))<=TUYA_BLE_AIR_FRAME_MAX)
-    {
-        memcpy(air_recv_packet.recv_data+offset,get_trsmitr_subpkg(&ty_trsmitr_proc),get_trsmitr_subpkg_len(&ty_trsmitr_proc));
-        offset += get_trsmitr_subpkg_len(&ty_trsmitr_proc);
-        air_recv_packet.recv_len = offset;
-    }
-    else
-    {
-        ret = MTP_INVALID_PARAM;
-        TUYA_BLE_LOG_ERROR("ble_data_unpack[%d] error:MTP_INVALID_PARAM");
-    }
-
-    if(ret == MTP_OK)
-    {
-        offset=0;
-        TUYA_BLE_LOG_DEBUG("ble_data_unpack[%d]",air_recv_packet.recv_len);
-
-        return 0;
-    }
-    else
-    {
-        return 2;
-    }
-}
-*/
 static uint8_t ble_cmd_data_crc_check(uint8_t *input,uint16_t len)
 {
     uint16_t data_len = 0;
@@ -323,7 +276,6 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
 
     if(ble_data_unpack(buf,len))
     {
-        //  tuya_log_d("ty_ble_rx_proc unpack error.\n");
         return;      //
     }
 
@@ -357,9 +309,9 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     TUYA_BLE_LOG_HEXDUMP_DEBUG("received encry data",(uint8_t*)air_recv_packet.recv_data,air_recv_packet.recv_len);//
 
     air_recv_packet.de_encrypt_buf = NULL;
-    
+
     air_recv_packet.de_encrypt_buf = (uint8_t*)tuya_ble_malloc(air_recv_packet.recv_len);
-    
+
     if(air_recv_packet.de_encrypt_buf==NULL)
     {
         TUYA_BLE_LOG_ERROR("air_recv_packet.de_encrypt_buf malloc failed.");
@@ -370,11 +322,11 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     {
         air_recv_packet.decrypt_buf_len = 0;
         temp = tuya_ble_decryption((uint8_t *)air_recv_packet.recv_data,air_recv_packet.recv_len,&air_recv_packet.decrypt_buf_len,
-        (uint8_t *)air_recv_packet.de_encrypt_buf,&tuya_ble_current_para,tuya_ble_pair_rand);
+                                   (uint8_t *)air_recv_packet.de_encrypt_buf,&tuya_ble_current_para,tuya_ble_pair_rand);
         tuya_ble_air_recv_packet_free();
     }
-    
-   
+
+
     if(temp != 0) //解密失败
     {
         TUYA_BLE_LOG_ERROR("ble receive data decryption error code = %d",temp);
@@ -411,11 +363,6 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
 
     current_cmd = ((air_recv_packet.de_encrypt_buf[8]<<8)|air_recv_packet.de_encrypt_buf[9]);
 
-//    if(current_cmd>FRM_CMD_APP_TO_BLE_MAX)
-//    {
-//        tuya_log_d("ble received CMD unknown!\n");
-//        return;
-//    }
 
     if((BONDING_CONN != tuya_ble_connect_status_get())&&(FRM_QRY_DEV_INFO_REQ != current_cmd)&&(PAIR_REQ != current_cmd)
             &&(FRM_LOGIN_KEY_REQ != current_cmd)&&(FRM_FACTORY_TEST_CMD != current_cmd)&&(FRM_NET_CONFIG_INFO_REQ != current_cmd)&&(FRM_ANOMALY_UNBONDING_REQ != current_cmd))
@@ -454,14 +401,15 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     evt.ble_cmd_data.p_data = ble_evt_buffer;
     evt.ble_cmd_data.data_len = air_recv_packet.decrypt_buf_len+1;
     TUYA_BLE_LOG_DEBUG("BLE EVENT SEND-CMD:0x%02x - LEN:0x%02x",current_cmd,air_recv_packet.decrypt_buf_len+1);
-    // tuya_log_d("ble event send test start\n");
+
     if(tuya_ble_event_send(&evt)!=0)
     {
         TUYA_BLE_LOG_ERROR("ble event send fail!");
         tuya_ble_free(ble_evt_buffer);
     }
+
     tuya_ble_free(air_recv_packet.de_encrypt_buf);
-    // tuya_log_d("ble event send test end!\n");
+
 }
 
 #if (TUYA_BLE_PROTOCOL_VERSION_HIGN==3)
@@ -471,12 +419,11 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
 static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 {
     uint8_t p_buf[90];
-//    uint16_t rand_value = 0;
     uint8_t payload_len = 0;
     uint32_t ack_sn = 0;
     uint8_t encry_mode = 0;
     uint32_t version_temp_s,version_temp_h;
-    
+
     memset(p_buf,0,sizeof(p_buf));
 
     ack_sn  = recv_data[1]<<24;
@@ -514,9 +461,8 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
     memcpy(&p_buf[6],tuya_ble_pair_rand,6);
     p_buf[12] = (version_temp_h>>8)&0xff;
     p_buf[13] = (version_temp_h&0xff);
-    
+
     tuya_ble_register_key_generate(&p_buf[14],&tuya_ble_current_para);
-   // memcpy(&p_buf[14],tuya_ble_current_para.auth_settings.auth_key,AUTH_KEY_LEN);
 
     p_buf[46] = (tuya_ble_firmware_version>>16)&0xff;
     p_buf[47] = (tuya_ble_firmware_version>>8)&0xff;
@@ -538,21 +484,12 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
     p_buf[80] = (tuya_ble_mcu_hardware_version>>16)&0xff;
     p_buf[81] = (tuya_ble_mcu_hardware_version>>8)&0xff;
     p_buf[82] = (tuya_ble_mcu_hardware_version&0xff);
-    
+
     p_buf[83] = TUYA_BLE_WIFI_DEVICE_REGISTER_MODE;
-    
+
     payload_len = 84;
 
-    if(tuya_ble_current_para.sys_settings.bound_flag==1)
-    {
-        encry_mode = ENCRYPTION_MODE_KEY_4;
-    }
-    else
-    {
-        encry_mode = ENCRYPTION_MODE_KEY_1;
-    }
-
-    // encry_mode = ENCRYPTION_MODE_KEY_4;
+    encry_mode = recv_data[0];
 
     if(tuya_ble_commData_send(FRM_QRY_DEV_INFO_RESP,ack_sn,p_buf,payload_len,encry_mode)==2)
     {
@@ -565,7 +502,6 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 {
     uint8_t p_buf[90];
-//    uint16_t rand_value = 0;
     uint8_t payload_len = 0;
     uint32_t ack_sn = 0;
     uint8_t encry_mode = 0;
@@ -631,16 +567,7 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 
     payload_len = 83;
 
-    if(tuya_ble_current_para.sys_settings.bound_flag==1)
-    {
-        encry_mode = ENCRYPTION_MODE_KEY_4;
-    }
-    else
-    {
-        encry_mode = ENCRYPTION_MODE_KEY_1;
-    }
-
-    // encry_mode = ENCRYPTION_MODE_KEY_4;
+    encry_mode = recv_data[0];
 
     if(tuya_ble_commData_send(FRM_QRY_DEV_INFO_RESP,ack_sn,p_buf,payload_len,encry_mode)==2)
     {
@@ -650,10 +577,25 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 
 #endif
 
+
+static void tuya_ble_storage_save_sys_settings_async_completed(void *p_param,tuya_ble_status_t result)
+{
+    tuya_ble_evt_param_t event;
+
+    event.hdr.event = TUYA_BLE_EVT_SAVE_SYS_SETTINGS_DATA_CALLBACK;
+    event.sys_settings_save_callback_data.type = 0;
+    event.sys_settings_save_callback_data.status = result;
+
+    if(tuya_ble_event_send(&event)!=0)
+    {
+        TUYA_BLE_LOG_ERROR("tuya_ble_storage_save_sys_settings_async_completed event Send failed.");
+    }
+}
+
+
 extern void tuya_ble_connect_monitor_timer_stop(void);
 static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
 {
-    //uint8_t ble_state;
     uint8_t p_buf[1];
     uint8_t encry_mode = 0;
     uint32_t ack_sn = 0;
@@ -668,19 +610,50 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
     {
         tuya_ble_connect_monitor_timer_stop();
 
+        if(1==tuya_ble_get_adv_connect_request_bit_status())
+        {
+            TUYA_BLE_LOG_INFO("ble adv data update,because the last broadcast data connection request flag was set!");
+            tuya_ble_adv_change();
+        }
+
         if(tuya_ble_current_para.sys_settings.bound_flag==1)
         {
             TUYA_BLE_LOG_INFO("PAIR_REQ already bound!");
             p_buf[0] = 2;
+
+            tuya_ble_connect_status_set(BONDING_CONN);
+
+            event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
+            event.connect_status = tuya_ble_connect_status_get();
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed.");
+            }
+            else
+            {
+                TUYA_BLE_LOG_INFO("tuya ble send cb event succeed.");
+            }
+
+            encry_mode = ENCRYPTION_MODE_SESSION_KEY;
+
+            tuya_ble_commData_send(PAIR_RESP,ack_sn,p_buf,1,encry_mode);
+
+
+            tuya_ble_commData_send(FRM_GET_UNIX_TIME_CHAR_MS_REQ,0,NULL,0,encry_mode);
+            TUYA_BLE_LOG_INFO("send FRM_GET_UNIX_TIME_CHAR_MS_REQ cmd to app.\n");
+
         }
         else
         {
+
 #if (TUYA_BLE_DEVICE_REGISTER_FROM_BLE)
             memcpy(tuya_ble_current_para.sys_settings.login_key,recv_data+29,LOGIN_KEY_LEN);
             memcpy(tuya_ble_current_para.sys_settings.device_virtual_id,recv_data+29+LOGIN_KEY_LEN,DEVICE_VIRTUAL_ID_LEN);
             tuya_ble_current_para.sys_settings.bound_flag = 1;
 
-            tuya_ble_storage_save_sys_settings();
+#if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
+            tuya_ble_storage_save_sys_settings_async(tuya_ble_storage_save_sys_settings_async_completed);
+#else
 
             tuya_ble_adv_change();
             TUYA_BLE_LOG_INFO("PAIR_REQ ok-%d",tuya_ble_current_para.sys_settings.bound_flag);
@@ -698,72 +671,62 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
             {
                 TUYA_BLE_LOG_DEBUG("tuya ble send cb event succeed.");
             }
+            p_buf[0] = 0x00;
 
+
+            tuya_ble_connect_status_set(BONDING_CONN);
+
+            event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
+            event.connect_status = tuya_ble_connect_status_get();
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed.");
+            }
+            else
+            {
+                TUYA_BLE_LOG_INFO("tuya ble send cb event succeed.");
+            }
+
+            encry_mode = ENCRYPTION_MODE_SESSION_KEY;
+
+            tuya_ble_commData_send(PAIR_RESP,ack_sn,p_buf,1,encry_mode);
+
+            tuya_ble_commData_send(FRM_GET_UNIX_TIME_CHAR_MS_REQ,0,NULL,0,encry_mode);
+            TUYA_BLE_LOG_INFO("send FRM_GET_UNIX_TIME_CHAR_MS_REQ cmd to app.\n");
+
+#endif
 
 #else
             tuya_ble_connect_status_set(UNBONDING_CONN);
-#endif
+
             p_buf[0] = 0x00;
-        }
 
-        if(tuya_ble_current_para.sys_settings.bound_flag==1)
-        {
-            tuya_ble_connect_status_set(BONDING_CONN);
-        }
-        event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
-        event.connect_status = tuya_ble_connect_status_get();
-        if(tuya_ble_cb_event_send(&event)!=0)
-        {
-            TUYA_BLE_LOG_ERROR("tuya ble send cb event failed.");
-        }
-        else
-        {
-            TUYA_BLE_LOG_INFO("tuya ble send cb event succeed.");
-        }
+            event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
+            event.connect_status = tuya_ble_connect_status_get();
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed.");
+            }
+            else
+            {
+                TUYA_BLE_LOG_INFO("tuya ble send cb event succeed.");
+            }
 
+            encry_mode = recv_data[0];
+
+            tuya_ble_commData_send(PAIR_RESP,ack_sn,p_buf,1,encry_mode);
+
+#endif
+
+        }
 
     }
     else
     {
         TUYA_BLE_LOG_ERROR("PAIR_REQ device id not match!");  //ID not match ,and disconnected.
         p_buf[0] = 0x01;
-
-    }
-
-
-    if(p_buf[0]==0)
-    {
-#if (TUYA_BLE_DEVICE_REGISTER_FROM_BLE)
-        encry_mode = ENCRYPTION_MODE_SESSION_KEY;
-#else
         encry_mode = recv_data[0];
-#endif
-    }
-    else if(p_buf[0]==1)
-    {
-        encry_mode = recv_data[0];
-    }
-    else if(p_buf[0]==2)
-    {
-        encry_mode = ENCRYPTION_MODE_SESSION_KEY;
-    }
-    else
-    {
-
-    }
-
-    tuya_ble_commData_send(PAIR_RESP,ack_sn,p_buf,1,encry_mode);
-
-    if(encry_mode == ENCRYPTION_MODE_SESSION_KEY)
-    {
-        //tuya_ble_unix_time_char_ms_req();
-        //tuya_ble_unix_time_char_date_req();
-        tuya_ble_commData_send(FRM_GET_UNIX_TIME_CHAR_MS_REQ,0,NULL,0,encry_mode);
-        TUYA_BLE_LOG_INFO("send FRM_GET_UNIX_TIME_CHAR_MS_REQ cmd to app.\n");
-    }
-
-    if(p_buf[0]==1)
-    {
+        tuya_ble_commData_send(PAIR_RESP,ack_sn,p_buf,1,encry_mode);
         tuya_ble_gap_disconnect();
     }
 
@@ -776,7 +739,6 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
 static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
 {
     uint8_t p_buf[70];
-//    uint16_t rand_value = 0;
     uint8_t payload_len = 0;
     uint32_t ack_sn = 0;
     uint8_t encry_mode = 0;
@@ -821,15 +783,12 @@ static void tuya_ble_handle_dev_info_req(uint8_t*recv_data,uint16_t recv_len)
         encry_mode = ENCRYPTION_MODE_KEY_1;
     }
 
-    // encry_mode = ENCRYPTION_MODE_KEY_4;
-
     tuya_ble_commData_send(FRM_QRY_DEV_INFO_RESP,ack_sn,p_buf,payload_len,encry_mode);
 }
 
 
 static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
 {
-//    uint8_t ble_state;
     uint8_t p_buf[1];
     uint8_t encry_mode = 0;
     uint32_t ack_sn = 0;
@@ -843,6 +802,12 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
     if(0 == memcmp(&recv_data[13],tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN))
     {
         tuya_ble_connect_monitor_timer_stop();
+
+        if(1==tuya_ble_get_adv_connect_request_bit_status())
+        {
+            TUYA_BLE_LOG_INFO("ble adv data update,because the last broadcast data connection request flag was set!");
+            tuya_ble_adv_change();
+        }
 
         if(tuya_ble_current_para.sys_settings.bound_flag==1)
         {
@@ -917,8 +882,6 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
 
     if(encry_mode == ENCRYPTION_MODE_SESSION_KEY)
     {
-        //tuya_ble_unix_time_char_ms_req();
-        //tuya_ble_unix_time_char_date_req();
         tuya_ble_commData_send(FRM_GET_UNIX_TIME_CHAR_MS_REQ,0,NULL,0,encry_mode);
         TUYA_BLE_LOG_INFO("send FRM_GET_UNIX_TIME_CHAR_MS_REQ cmd to app.");
     }
@@ -934,7 +897,6 @@ static void tuya_ble_handle_pair_req(uint8_t*recv_data,uint16_t recv_len)
 
 static void tuya_ble_handle_net_config_info_req(uint8_t*recv_data,uint16_t recv_len)
 {
-//    uint8_t ble_state;
     uint8_t p_buf[1];
     uint8_t encry_mode = 0;
     uint32_t ack_sn = 0;
@@ -987,7 +949,6 @@ static void tuya_ble_handle_net_config_info_req(uint8_t*recv_data,uint16_t recv_
 
 static void tuya_ble_handle_ble_passthrough_data_req(uint8_t*recv_data,uint16_t recv_len)
 {
-//    uint32_t ack_sn = 0;
     tuya_ble_cb_evt_param_t event;
     uint16_t data_len;
 
@@ -1023,9 +984,6 @@ static void tuya_ble_handle_ble_passthrough_data_req(uint8_t*recv_data,uint16_t 
 #include "tuya_ble_app_production_test.h"
 static void tuya_ble_handle_ble_factory_test_req(uint8_t*recv_data,uint16_t recv_len)
 {
-//    uint32_t ack_sn = 0;
-//    uint8_t *event_buffer = NULL;
-//    uint16_t event_len;
     uint16_t data_len;
     uint32_t ack_sn;
     uint8_t sum;
@@ -1048,7 +1006,7 @@ static void tuya_ble_handle_ble_factory_test_req(uint8_t*recv_data,uint16_t recv
     if((recv_data[13]==0x66)&&(recv_data[14]==0xAA))
     {
         sum = tuya_ble_check_sum(&recv_data[13],data_len-1);
-        if(sum==recv_data[data_len-1])
+        if(sum==recv_data[13+data_len-1])
         {
             tuya_ble_app_production_test_process(1,&recv_data[13],data_len);
         }
@@ -1128,7 +1086,7 @@ static void tuya_ble_handle_ota_req(uint16_t cmd,uint8_t*recv_data,uint32_t recv
     }
     else
     {
-        
+
     }
 }
 
@@ -1140,7 +1098,7 @@ static void tuya_ble_handle_unix_time_char_ms_resp(uint8_t*recv_data,uint16_t re
     uint64_t time_stamp_ms;
     uint32_t time_stamp;
     tuya_ble_cb_evt_param_t event;
-    
+
     memset(&event,0,sizeof(tuya_ble_cb_evt_param_t));
 
     if(recv_len<30)
@@ -1164,7 +1122,7 @@ static void tuya_ble_handle_unix_time_char_ms_resp(uint8_t*recv_data,uint16_t re
         tuya_ble_rtc_set_timestamp(time_stamp,zone_temp);
 
         event.evt = TUYA_BLE_CB_EVT_TIME_STAMP;
-        //event.timestamp_data.timestamp = time_stamp;
+
         memcpy(event.timestamp_data.timestamp_string,current_timems_string,13);
         event.timestamp_data.time_zone = zone_temp;
         if(tuya_ble_cb_event_send(&event)!=0)
@@ -1191,7 +1149,7 @@ static void tuya_ble_handle_unix_time_date_resp(uint8_t*recv_data,uint16_t recv_
     }
 
     memset(&event,0,sizeof(tuya_ble_cb_evt_param_t));
-    
+
     if(!buffer_value_is_all_x(&recv_data[13],7,0))
     {
         time_temp.nYear = 2000+recv_data[13];
@@ -1233,9 +1191,7 @@ static void tuya_ble_handle_dp_write_req(uint8_t*recv_data,uint16_t recv_len)
 {
     mtp_ret ret;
     klv_node_s *list = NULL;
-//   klv_node_s *node = NULL;
     uint8_t p_buf[1];
-//    uint8_t alloc_buf[7];
     uint16_t data_len = 0;
     uint32_t ack_sn = 0;
     tuya_ble_cb_evt_param_t event;
@@ -1263,15 +1219,7 @@ static void tuya_ble_handle_dp_write_req(uint8_t*recv_data,uint16_t recv_len)
         tuya_ble_commData_send(FRM_CMD_RESP,ack_sn,p_buf,1,ENCRYPTION_MODE_SESSION_KEY);
         return;
     }
-//    node = list;
-//     while(node)
-//    {
-//        TUYA_BLE_LOG("dp.id:%d\n",node->id);
-//        TUYA_BLE_LOG("dp.type:%d\n",node->type);
-//        TUYA_BLE_LOG("dp.len:%d\n",node->len);
-//        TUYA_BLE_HEXDUMP("dp.data[] \n", 16, node->data, node->len);
-//        node = node->next;
-//    }
+
     free_klv_list(list);
     p_buf[0] = 0x00;
 
@@ -1307,7 +1255,6 @@ static void tuya_ble_handle_dp_write_req(uint8_t*recv_data,uint16_t recv_len)
 static void tuya_ble_handle_dp_query_req(uint8_t*recv_data,uint16_t recv_len)
 {
     uint8_t p_buf[1];
-    // uint8_t alloc_buf[7];
     uint16_t dp_num = 0;
     uint32_t ack_sn = 0;
     tuya_ble_cb_evt_param_t event;
@@ -1322,7 +1269,7 @@ static void tuya_ble_handle_dp_query_req(uint8_t*recv_data,uint16_t recv_len)
 
     p_buf[0] = 0x00;
 
-    tuya_ble_commData_send(FRM_CMD_RESP,ack_sn,p_buf,1,ENCRYPTION_MODE_SESSION_KEY);
+    tuya_ble_commData_send(FRM_STATE_QUERY_RESP,ack_sn,p_buf,1,ENCRYPTION_MODE_SESSION_KEY);
 
     event.evt = TUYA_BLE_CB_EVT_DP_QUERY;
 
@@ -1356,19 +1303,19 @@ static void tuya_ble_handle_dp_query_req(uint8_t*recv_data,uint16_t recv_len)
     }
 }
 
+static void tuya_ble_device_unbond_completed(void *p_param,tuya_ble_status_t result)
+{
+    if(result!=TUYA_BLE_SUCCESS)
+    {
+        TUYA_BLE_LOG_ERROR("tuya_ble_device_unbond save sys settings data failed,reset....");
+        tuya_ble_device_reset();  //must be reset!
+    }
+}
 
 void tuya_ble_device_unbond(void)
 {
-
-    tuya_ble_gap_disconnect();
-    memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
-    tuya_ble_current_para.sys_settings.bound_flag= 0;
-    tuya_ble_storage_save_sys_settings();
-    tuya_ble_adv_change();
-    tuya_ble_connect_status_set(UNBONDING_UNCONN);
-    TUYA_BLE_LOG_INFO("tuya_ble_device_unbond current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+    tuya_ble_storage_save_sys_settings_async(tuya_ble_device_unbond_completed);
 }
-
 
 
 static void tuya_ble_handle_unbond_req(uint8_t*recv_data,uint16_t recv_len)
@@ -1400,7 +1347,14 @@ static void tuya_ble_handle_unbond_req(uint8_t*recv_data,uint16_t recv_len)
     p_buf[0] = 0;
 
     tuya_ble_commData_send(FRM_UNBONDING_RESP,ack_sn,p_buf,1,encry_mode);
-    tuya_ble_device_unbond();
+
+    tuya_ble_gap_disconnect();
+
+    memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+    tuya_ble_current_para.sys_settings.bound_flag= 0;
+    tuya_ble_adv_change();
+    tuya_ble_connect_status_set(UNBONDING_UNCONN);
+    TUYA_BLE_LOG_INFO("tuya_ble_device_unbond current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
 
     event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
     event.connect_status = tuya_ble_connect_status_get();
@@ -1413,6 +1367,9 @@ static void tuya_ble_handle_unbond_req(uint8_t*recv_data,uint16_t recv_len)
     {
 
     }
+
+    tuya_ble_device_unbond();
+
 #endif
 }
 
@@ -1448,7 +1405,14 @@ static void tuya_ble_handle_anomaly_unbond_req(uint8_t*recv_data,uint16_t recv_l
     p_buf[0] = 0;
 
     tuya_ble_commData_send(FRM_ANOMALY_UNBONDING_RESP,ack_sn,p_buf,1,encry_mode);
-    tuya_ble_device_unbond();
+    
+    tuya_ble_gap_disconnect();
+
+    memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+    tuya_ble_current_para.sys_settings.bound_flag= 0;
+    tuya_ble_adv_change();
+    tuya_ble_connect_status_set(UNBONDING_UNCONN);
+    TUYA_BLE_LOG_INFO("tuya_ble_handle_anomaly_unbond_req - current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
 
     event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
     event.connect_status = tuya_ble_connect_status_get();
@@ -1462,6 +1426,8 @@ static void tuya_ble_handle_anomaly_unbond_req(uint8_t*recv_data,uint16_t recv_l
 
     }
 
+    tuya_ble_device_unbond();
+    
 #endif
 }
 
@@ -1498,7 +1464,15 @@ static void tuya_ble_handle_device_reset_req(uint8_t*recv_data,uint16_t recv_len
 
     tuya_ble_commData_send(FRM_DEVICE_RESET_RESP,ack_sn,p_buf,1,encry_mode);
     memset(tuya_ble_current_para.sys_settings.device_virtual_id,0,DEVICE_VIRTUAL_ID_LEN);
-    tuya_ble_device_unbond();
+    
+    tuya_ble_gap_disconnect();
+
+    memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+    tuya_ble_current_para.sys_settings.bound_flag= 0;
+    tuya_ble_adv_change();
+    tuya_ble_connect_status_set(UNBONDING_UNCONN);
+    TUYA_BLE_LOG_INFO("tuya_ble_device_unbond current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+
 
     event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
     event.connect_status = tuya_ble_connect_status_get();
@@ -1511,6 +1485,8 @@ static void tuya_ble_handle_device_reset_req(uint8_t*recv_data,uint16_t recv_len
     {
 
     }
+    
+    tuya_ble_device_unbond();
 #endif
 }
 
@@ -1628,9 +1604,9 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
     uint16_t en_len  = 0;
     uint32_t out_len = 0;
     uint32_t temp_len = 0;
-	uint32_t package_number = 0;
+    uint32_t package_number = 0;
     tuya_ble_r_air_send_packet  air_send_packet;
-    
+
     memset(&air_send_packet,0,sizeof(air_send_packet));
 
     tuya_ble_connect_status_t currnet_connect_status = tuya_ble_connect_status_get();
@@ -1662,7 +1638,7 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
         en_len = 1;
         memset(iv,0,sizeof(iv));
     }
-    
+
     air_send_packet.send_len = 14+len;
 
     if(air_send_packet.send_len%16==0)
@@ -1682,12 +1658,11 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
         air_send_packet.send_len = 0;
         return 1; //加密后数据加上加密头超过AIR_FRAME_MAX
     }
-    
-//    ty_ble_send_flag=1;    
+
     air_send_packet.send_data = NULL;
-       
+
     air_send_packet.send_data = (uint8_t *)tuya_ble_malloc(temp_len); //must temp_len
-    
+
     if(air_send_packet.send_data==NULL)
     {
         TUYA_BLE_LOG_ERROR("air_send_packet.send_data malloc failed return 3.");
@@ -1724,36 +1699,14 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
 
     air_send_packet.send_data[12+len] = crc16>>8;
     air_send_packet.send_data[13+len] = crc16;
-    
 
-    TUYA_BLE_LOG_HEXDUMP_DEBUG("ble_commData_send plain data",(u8*)air_send_packet.send_data,air_send_packet.send_len);//
 
-    /*
-        air_recv_packet.de_encrypt_buf[17] = ble_send_sn>>24;
-        air_recv_packet.de_encrypt_buf[18] = ble_send_sn>>16;
-        air_recv_packet.de_encrypt_buf[19] = ble_send_sn>>8;
-        air_recv_packet.de_encrypt_buf[20] = ble_send_sn;
-        ble_send_sn++;
+    TUYA_BLE_LOG_HEXDUMP_DEBUG("ble_commData_send plain data",(uint8_t*)air_send_packet.send_data,air_send_packet.send_len);//
 
-        air_recv_packet.de_encrypt_buf[21] = ack_sn>>24;
-        air_recv_packet.de_encrypt_buf[22] = ack_sn>>16;
-        air_recv_packet.de_encrypt_buf[23] = ack_sn>>8;
-        air_recv_packet.de_encrypt_buf[24] = ack_sn;
-
-        air_recv_packet.de_encrypt_buf[25] = cmd>>8;
-        air_recv_packet.de_encrypt_buf[26] = cmd;
-
-        air_recv_packet.de_encrypt_buf[27] = len>>8;
-        air_recv_packet.de_encrypt_buf[28] = len;
-
-        memcpy(&air_recv_packet.de_encrypt_buf[29],data,len);
-
-        air_recv_packet.decrypt_buf_len = 29+len;
-     */   
     air_send_packet.encrypt_data_buf = NULL;
-    
+
     air_send_packet.encrypt_data_buf = (uint8_t *)tuya_ble_malloc(temp_len+en_len);
-    
+
     if(air_send_packet.encrypt_data_buf==NULL)
     {
         TUYA_BLE_LOG_ERROR("air_send_packet.encrypt_data_buf malloc failed.");
@@ -1765,8 +1718,8 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
         air_send_packet.encrypt_data_buf_len = 0;
         memset(air_send_packet.encrypt_data_buf,0,temp_len+en_len);
     }
-     
-         
+
+
     air_send_packet.encrypt_data_buf[0] = encryption_mode;
 
     if(encryption_mode != ENCRYPTION_MODE_NONE)
@@ -1775,32 +1728,32 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
     }
     else
     {
-        
+
     }
 
     if(tuya_ble_encryption(encryption_mode,iv,(uint8_t *)air_send_packet.send_data,air_send_packet.send_len,&out_len,
-        (uint8_t *)(air_send_packet.encrypt_data_buf+en_len),&tuya_ble_current_para,tuya_ble_pair_rand)==0)
+                           (uint8_t *)(air_send_packet.encrypt_data_buf+en_len),&tuya_ble_current_para,tuya_ble_pair_rand)==0)
     {
         if(out_len!=temp_len)
         {
-            TUYA_BLE_LOG_ERROR("ble_commData_send encryed error."); 
-            tuya_ble_free(air_send_packet.send_data);        
-            tuya_ble_free(air_send_packet.encrypt_data_buf);        
+            TUYA_BLE_LOG_ERROR("ble_commData_send encryed error.");
+            tuya_ble_free(air_send_packet.send_data);
+            tuya_ble_free(air_send_packet.encrypt_data_buf);
             return 1;
         }
-        // tuya_log_d("out_len = %d",out_len);
+
         air_send_packet.encrypt_data_buf_len = en_len + out_len;
-        //  tuya_log_d("encrypt_data_buf_len = %d",air_send_packet.encrypt_data_buf_len);
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("ble_commData_send encryped data",(u8*)air_send_packet.encrypt_data_buf,air_send_packet.encrypt_data_buf_len);//
+
+        TUYA_BLE_LOG_HEXDUMP_DEBUG("ble_commData_send encryped data",(uint8_t*)air_send_packet.encrypt_data_buf,air_send_packet.encrypt_data_buf_len);//
     }
     else
     {
-        TUYA_BLE_LOG_ERROR("ble_commData_send encryed fail."); 
-        tuya_ble_free(air_send_packet.send_data);        
-        tuya_ble_free(air_send_packet.encrypt_data_buf);        
+        TUYA_BLE_LOG_ERROR("ble_commData_send encryed fail.");
+        tuya_ble_free(air_send_packet.send_data);
+        tuya_ble_free(air_send_packet.encrypt_data_buf);
         return 1;
     }
-    
+
     tuya_ble_free(air_send_packet.send_data);
     package_number = 0;
     trsmitr_init(&ty_trsmitr_proc_send);
@@ -1809,27 +1762,19 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
         ret = trsmitr_send_pkg_encode(&ty_trsmitr_proc_send,TUYA_BLE_PROTOCOL_VERSION_HIGN,(uint8_t *)(air_send_packet.encrypt_data_buf), air_send_packet.encrypt_data_buf_len);
         if (MTP_OK != ret && MTP_TRSMITR_CONTINUE != ret)
         {
-            tuya_ble_free(air_send_packet.encrypt_data_buf);  
+            tuya_ble_free(air_send_packet.encrypt_data_buf);
             return 1;
         }
         send_len = get_trsmitr_subpkg_len(&ty_trsmitr_proc_send);
         memcpy(p_buf,get_trsmitr_subpkg(&ty_trsmitr_proc_send),send_len);
-		package_number++;
-		tuya_ble_gatt_send_data_enqueue(p_buf,send_len);
-     /*   retries_cnt = 5;   //5x20 ms max delay time
-		//TUYA_BLE_LOG_HEXDUMP_DEBUG("gatt send data : ",(uint8_t *)p_buf,send_len);
-        while((tuya_ble_gatt_send_data(p_buf,send_len) != TUYA_BLE_SUCCESS)&&(retries_cnt>0))
-        {
-			TUYA_BLE_LOG_WARNING("tuya_ble_gatt_send_data retries_cnt = %d",retries_cnt);
-            retries_cnt--;
-            tuya_ble_device_delay_ms(20);
-        }
-		*/
+        package_number++;
+        tuya_ble_gatt_send_data_enqueue(p_buf,send_len);
+
     } while (ret == MTP_TRSMITR_CONTINUE);
 
     TUYA_BLE_LOG_INFO("ble_commData_send len = %d , package_number = %d , protocol version : 0x%02x , error code : 0x%02x",air_send_packet.encrypt_data_buf_len,package_number,TUYA_BLE_PROTOCOL_VERSION_HIGN,err);
 
-    tuya_ble_free(air_send_packet.encrypt_data_buf);  
+    tuya_ble_free(air_send_packet.encrypt_data_buf);
 
     return 0;
 }

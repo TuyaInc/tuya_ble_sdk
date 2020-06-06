@@ -33,10 +33,10 @@
 #if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==0)
 
 /* Block sizes must not get too small. */
-#define heapMINIMUM_BLOCK_SIZE	( ( size_t ) ( xHeapStructSize << 1 ) )
+#define heapMINIMUM_BLOCK_SIZE	( ( uint32_t ) ( xHeapStructSize << 1 ) )
 
 /* Assumes 8bit bytes! */
-#define heapBITS_PER_BYTE		( ( size_t ) 8 )
+#define heapBITS_PER_BYTE		( ( uint32_t ) 8 )
 
 static uint8_t ucHeap[ TUYA_BLE_TOTAL_HEAP_SIZE ];
 
@@ -46,7 +46,7 @@ of their memory address. */
 typedef struct A_BLOCK_LINK
 {
     struct A_BLOCK_LINK *pxNextFreeBlock;	/*<< The next free block in the list. */
-    size_t xBlockSize;						/*<< The size of the free block. */
+    uint32_t xBlockSize;						/*<< The size of the free block. */
 } BlockLink_t;
 
 /*-----------------------------------------------------------*/
@@ -69,25 +69,25 @@ static void prvHeapInit( void );
 
 /* The size of the structure placed at the beginning of each allocated memory
 block must by correctly byte aligned. */
-static const size_t xHeapStructSize	= ( sizeof( BlockLink_t ) + ( ( size_t ) ( portBYTE_ALIGNMENT - 1 ) ) ) & ~( ( size_t ) portBYTE_ALIGNMENT_MASK );
+static const uint32_t xHeapStructSize	= ( sizeof( BlockLink_t ) + ( ( uint32_t ) ( portBYTE_ALIGNMENT - 1 ) ) ) & ~( ( uint32_t ) portBYTE_ALIGNMENT_MASK );
 
 /* Create a couple of list links to mark the start and end of the list. */
 static BlockLink_t xStart, *pxEnd = NULL;
 
 /* Keeps track of the number of free bytes remaining, but says nothing about
 fragmentation. */
-static size_t xFreeBytesRemaining = 0U;
-static size_t xMinimumEverFreeBytesRemaining = 0U;
+static uint32_t xFreeBytesRemaining = 0U;
+static uint32_t xMinimumEverFreeBytesRemaining = 0U;
 
 /* Gets set to the top bit of an size_t type.  When this bit in the xBlockSize
 member of an BlockLink_t structure is set then the block belongs to the
 application.  When the bit is free the block is still part of the free heap
 space. */
-static size_t xBlockAllocatedBit = 0;
+static uint32_t xBlockAllocatedBit = 0;
 
 /*-----------------------------------------------------------*/
 
-void *pvTuyaPortMalloc( size_t xWantedSize )
+void *pvTuyaPortMalloc( uint32_t xWantedSize )
 {
     BlockLink_t *pxBlock, *pxPreviousBlock, *pxNewBlockLink;
     void *pvReturn = NULL;
@@ -168,7 +168,7 @@ void *pvTuyaPortMalloc( size_t xWantedSize )
                         cast is used to prevent byte alignment warnings from the
                         compiler. */
                         pxNewBlockLink = ( void * ) ( ( ( uint8_t * ) pxBlock ) + xWantedSize );
-                        tuyaASSERT( ( ( ( size_t ) pxNewBlockLink ) & portBYTE_ALIGNMENT_MASK ) == 0 );
+                        tuyaASSERT( ( ( ( uint32_t ) pxNewBlockLink ) & portBYTE_ALIGNMENT_MASK ) == 0 );
 
                         /* Calculate the sizes of two blocks split from the
                         single block. */
@@ -232,7 +232,7 @@ void *pvTuyaPortMalloc( size_t xWantedSize )
     }
 #endif
 
-    tuyaASSERT( ( ( ( size_t ) pvReturn ) & ( size_t ) portBYTE_ALIGNMENT_MASK ) == 0 );
+    tuyaASSERT( ( ( ( uint32_t ) pvReturn ) & ( uint32_t ) portBYTE_ALIGNMENT_MASK ) == 0 );
     return pvReturn;
 }
 /*-----------------------------------------------------------*/
@@ -285,13 +285,13 @@ void vTuyaPortFree( void *pv )
 }
 /*-----------------------------------------------------------*/
 
-size_t xTuyaPortGetFreeHeapSize( void )
+uint32_t xTuyaPortGetFreeHeapSize( void )
 {
     return xFreeBytesRemaining;
 }
 /*-----------------------------------------------------------*/
 
-size_t xTuyaPortGetMinimumEverFreeHeapSize( void )
+uint32_t xTuyaPortGetMinimumEverFreeHeapSize( void )
 {
     return xMinimumEverFreeBytesRemaining;
 }
@@ -307,17 +307,17 @@ static void prvHeapInit( void )
 {
     BlockLink_t *pxFirstFreeBlock;
     uint8_t *pucAlignedHeap;
-    size_t uxAddress;
-    size_t xTotalHeapSize = TUYA_BLE_TOTAL_HEAP_SIZE;
+    uint32_t uxAddress;
+    uint32_t xTotalHeapSize = TUYA_BLE_TOTAL_HEAP_SIZE;
 
     /* Ensure the heap starts on a correctly aligned boundary. */
-    uxAddress = ( size_t ) ucHeap;
+    uxAddress = ( uint32_t ) ucHeap;
 
     if( ( uxAddress & portBYTE_ALIGNMENT_MASK ) != 0 )
     {
         uxAddress += ( portBYTE_ALIGNMENT - 1 );
-        uxAddress &= ~( ( size_t ) portBYTE_ALIGNMENT_MASK );
-        xTotalHeapSize -= uxAddress - ( size_t ) ucHeap;
+        uxAddress &= ~( ( uint32_t ) portBYTE_ALIGNMENT_MASK );
+        xTotalHeapSize -= uxAddress - ( uint32_t ) ucHeap;
     }
 
     pucAlignedHeap = ( uint8_t * ) uxAddress;
@@ -325,13 +325,13 @@ static void prvHeapInit( void )
     /* xStart is used to hold a pointer to the first item in the list of free
     blocks.  The void cast is used to prevent compiler warnings. */
     xStart.pxNextFreeBlock = ( void * ) pucAlignedHeap;
-    xStart.xBlockSize = ( size_t ) 0;
+    xStart.xBlockSize = ( uint32_t ) 0;
 
     /* pxEnd is used to mark the end of the list of free blocks and is inserted
     at the end of the heap space. */
-    uxAddress = ( ( size_t ) pucAlignedHeap ) + xTotalHeapSize;
+    uxAddress = ( ( uint32_t ) pucAlignedHeap ) + xTotalHeapSize;
     uxAddress -= xHeapStructSize;
-    uxAddress &= ~( ( size_t ) portBYTE_ALIGNMENT_MASK );
+    uxAddress &= ~( ( uint32_t ) portBYTE_ALIGNMENT_MASK );
     pxEnd = ( void * ) uxAddress;
     pxEnd->xBlockSize = 0;
     pxEnd->pxNextFreeBlock = NULL;
@@ -339,7 +339,7 @@ static void prvHeapInit( void )
     /* To start with there is a single free block that is sized to take up the
     entire heap space, minus the space taken by pxEnd. */
     pxFirstFreeBlock = ( void * ) pucAlignedHeap;
-    pxFirstFreeBlock->xBlockSize = uxAddress - ( size_t ) pxFirstFreeBlock;
+    pxFirstFreeBlock->xBlockSize = uxAddress - ( uint32_t ) pxFirstFreeBlock;
     pxFirstFreeBlock->pxNextFreeBlock = pxEnd;
 
     /* Only one block exists - and it covers the entire usable heap space. */
@@ -347,7 +347,7 @@ static void prvHeapInit( void )
     xFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
 
     /* Work out the position of the top bit in a size_t variable. */
-    xBlockAllocatedBit = ( ( size_t ) 1 ) << ( ( sizeof( size_t ) * heapBITS_PER_BYTE ) - 1 );
+    xBlockAllocatedBit = ( ( uint32_t ) 1 ) << ( ( sizeof( uint32_t ) * heapBITS_PER_BYTE ) - 1 );
 }
 /*-----------------------------------------------------------*/
 

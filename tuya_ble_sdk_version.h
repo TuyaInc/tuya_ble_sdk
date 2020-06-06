@@ -27,8 +27,8 @@
 #define TUYA_BLE_SDK_VERSION_H__
 
 
-#define TUYA_BLE_SDK_VERSION_NUM       0x010201
-#define TUYA_BLE_SDK_VERSION_STR	   "1.2.1" 	
+#define TUYA_BLE_SDK_VERSION_NUM       0x010205
+#define TUYA_BLE_SDK_VERSION_STR	   "1.2.5" 	
 
 
 #endif

@@ -28,7 +28,7 @@
 #include <stdint.h>
 #include "tuya_ble_internal_config.h"
 
-#include "tuya_ble_app_demo.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,6 +69,8 @@ tuya_ble_status_t tuya_ble_prod_beacon_scan_stop(void);
 tuya_ble_status_t tuya_ble_prod_beacon_get_rssi_avg(int8_t *rssi);
 
 tuya_ble_status_t tuya_ble_prod_gpio_test(void);
+
+void tuya_ble_internal_production_test_with_ble_flag_clear(void);
 
 #endif
 

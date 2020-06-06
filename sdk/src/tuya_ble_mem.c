@@ -28,6 +28,7 @@
 #include "tuya_ble_mem.h"
 #include "tuya_ble_internal_config.h"
 
+
 #if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==0)
 
 /*
@@ -72,7 +73,7 @@ tuya_ble_status_t tuya_ble_free(uint8_t *ptr)
  *@note     
  *           
  * */
-void *tuya_ble_calloc_n(size_t n,size_t size)
+void *tuya_ble_calloc_n(uint32_t n,uint32_t size)
 {
     void *ptr = NULL;
     ptr = pvTuyaPortMalloc(n * size);

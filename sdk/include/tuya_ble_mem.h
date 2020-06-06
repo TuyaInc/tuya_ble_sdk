@@ -33,14 +33,9 @@ extern "C" {
 #endif
 
 
-
 void *tuya_ble_malloc(uint16_t size);
 
 tuya_ble_status_t tuya_ble_free(uint8_t *ptr);
-
-//void *tuya_ble_calloc_n(size_t n,size_t size);
-
-//void tuya_ble_free_n(void *ptr);
 
 
 #ifdef __cplusplus

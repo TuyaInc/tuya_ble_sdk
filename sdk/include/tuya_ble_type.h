@@ -29,7 +29,6 @@
 #include "tuya_ble_stdlib.h"
 
 
-
 #ifndef NULL
 #define NULL 0
 #endif
@@ -118,7 +117,7 @@
 
     static inline unsigned int tuya_ble_gcc_current_sp(void)
     {
-        register unsigned sp __ASM("sp");
+        register unsigned sp __asm("sp");
         return sp;
     }
 #endif
@@ -142,15 +141,6 @@
 
 #define TUYA_BLE_PRODUCT_ID_MAX_LEN  16
 
-/*
-enum{
-    TUYA_BLE_DEVICE_NORMAL = 0,
-    TUYA_BLE_DEVICE_MULTI_PROTOCOL_WIFI, 
-    TUYA_BLE_DEVICE_MULTI_PROTOCOL_WIFI_ZIGBEE,
-    TUYA_BLE_DEVICE_MULTI_PROTOCOL_ZIGBEE,    
-};
-*/
-
 /** @defgroup TUY_BLE_DEVICE_COMMUNICATION_ABILITY tuya ble device communication ability
  * @{
  */
@@ -170,6 +160,11 @@ enum{
 #define TUYA_BLE_LOG_LEVEL_INFO         3U
 #define TUYA_BLE_LOG_LEVEL_DEBUG        4U
 
+#define TUYA_APP_LOG_LEVEL_ERROR        1U
+#define TUYA_APP_LOG_LEVEL_WARNING      2U
+#define TUYA_APP_LOG_LEVEL_INFO         3U
+#define TUYA_APP_LOG_LEVEL_DEBUG        4U
+
 /** @defgroup TUYA_BLE_SECURE_CONNECTION_TYPE tuya ble secure connection type
  * @{
  */
@@ -183,6 +178,26 @@ enum{
 /** End of TUYA_BLE_SECURE_CONNECTION_TYPE
   * @}
   */
+
+typedef enum {
+    TUYA_BLE_SUCCESS  = 0x00,
+    TUYA_BLE_ERR_INTERNAL,
+    TUYA_BLE_ERR_NOT_FOUND,
+    TUYA_BLE_ERR_NO_EVENT,
+    TUYA_BLE_ERR_NO_MEM,
+    TUYA_BLE_ERR_INVALID_ADDR,     // Invalid pointer supplied
+    TUYA_BLE_ERR_INVALID_PARAM,    // Invalid parameter(s) supplied.
+    TUYA_BLE_ERR_INVALID_STATE,    // Invalid state to perform operation.
+    TUYA_BLE_ERR_INVALID_LENGTH,
+    TUYA_BLE_ERR_DATA_SIZE,
+    TUYA_BLE_ERR_TIMEOUT,
+    TUYA_BLE_ERR_BUSY,
+    TUYA_BLE_ERR_COMMON,
+    TUYA_BLE_ERR_RESOURCES,
+    TUYA_BLE_ERR_UNKNOWN,          // other ble sdk errors
+} tuya_ble_status_t;
+
+
 
 typedef enum{
     TUYA_BLE_PRODUCT_ID_TYPE_PID,
@@ -245,6 +260,8 @@ typedef enum {
     TUYA_BLE_EVT_DEVICE_RESET_RESPONSE,
     TUYA_BLE_EVT_TIME_REQ,
 	TUYA_BLE_EVT_GATT_SEND_DATA,
+    TUYA_BLE_EVT_CONNECTING_REQUEST,
+    TUYA_BLE_EVT_SAVE_SYS_SETTINGS_DATA_CALLBACK,
 } tuya_ble_evt_t;
 
 
@@ -350,6 +367,11 @@ typedef struct{
 
 
 typedef struct{
+	uint8_t cmd;
+}tuya_ble_connecting_request_data_t;
+
+
+typedef struct{
   int32_t evt_id;  
   void *data;
   void (*custom_event_handler)(int32_t evt_id,void*data);
@@ -380,6 +402,11 @@ typedef struct{
 	uint8_t time_type;  //0-13-byte millisecond string ,1 - normal time format
 }tuya_ble_time_req_data_t;
 
+typedef struct{
+	uint8_t type;  //0-pair , 1-unbound req ,2- anomaly_unbound, 3-device reset
+    tuya_ble_status_t status;
+    void *p_param;
+}tuya_ble_save_sys_settings_callback_data_t;
 
 typedef struct{
   tuya_ble_evt_t  event;
@@ -411,6 +438,8 @@ typedef struct {
         tuya_ble_anomaly_ubound_response_t anomaly_ubound_res_data;
         tuya_ble_device_reset_response_t device_reset_res_data;
         tuya_ble_time_req_data_t  time_req_data;
+        tuya_ble_connecting_request_data_t connecting_request_data;
+        tuya_ble_save_sys_settings_callback_data_t sys_settings_save_callback_data;
 	};
 } tuya_ble_evt_param_t;
 
@@ -474,13 +503,7 @@ typedef struct{
 	uint16_t data_len;
 	uint8_t *p_data;
 }tuya_ble_ota_data_t;
-/*
-typedef struct{
-	tuya_ble_ota_data_type_t type;	
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_ota_data_response_t;
-*/
+
 /*
  * network data,unformatted json data,for example " {"wifi_ssid":"tuya","password":"12345678","token":"xxxxxxxxxx"} "
  * */
@@ -609,25 +632,6 @@ typedef enum {
 
 
 
-typedef enum {
-    TUYA_BLE_SUCCESS  = 0x00,
-    TUYA_BLE_ERR_INTERNAL,
-    TUYA_BLE_ERR_NOT_FOUND,
-    TUYA_BLE_ERR_NO_EVENT,
-    TUYA_BLE_ERR_NO_MEM,
-    TUYA_BLE_ERR_INVALID_ADDR,     // Invalid pointer supplied
-    TUYA_BLE_ERR_INVALID_PARAM,    // Invalid parameter(s) supplied.
-    TUYA_BLE_ERR_INVALID_STATE,    // Invalid state to perform operation.
-    TUYA_BLE_ERR_INVALID_LENGTH,
-    TUYA_BLE_ERR_DATA_SIZE,
-    TUYA_BLE_ERR_TIMEOUT,
-    TUYA_BLE_ERR_BUSY,
-    TUYA_BLE_ERR_COMMON,
-    TUYA_BLE_ERR_RESOURCES,
-    TUYA_BLE_ERR_UNKNOWN,          // other ble sdk errors
-} tuya_ble_status_t;
-
-
 typedef void (*tuya_ble_callback_t)(tuya_ble_cb_evt_param_t* param);
 
 
@@ -638,9 +642,6 @@ typedef struct
 	  uint8_t   h_id[H_ID_LEN];
 	  uint8_t   device_id[DEVICE_ID_LEN];
 	  uint8_t   mac[MAC_LEN];
-     // tuya_ble_product_id_type_t pid_type;
-      //uint8_t   pid_len;
-	  //uint8_t   factory_pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
 	  uint8_t   auth_key[AUTH_KEY_LEN];
       uint8_t   mac_string[MAC_LEN*2];
 	  uint8_t  res[128];
@@ -656,7 +657,6 @@ typedef struct
 	  uint8_t   common_pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
 	  uint8_t   login_key[LOGIN_KEY_LEN];
       uint8_t   ecc_secret_key[ECC_SECRET_KEY_LEN];
-      //uint8_t   secret_key[SECRET_KEY_LEN];
       uint8_t   device_virtual_id[DEVICE_VIRTUAL_ID_LEN];
       uint8_t   user_rand[PAIR_RANDOM_LEN];
 	  uint8_t   bound_flag;

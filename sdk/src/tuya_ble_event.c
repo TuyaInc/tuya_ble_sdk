@@ -98,14 +98,35 @@ uint32_t tuya_ble_sched_init(uint16_t event_size, uint16_t queue_size, void * p_
     return 0;
 }
 
+uint16_t tuya_ble_sched_queue_size_get(void)
+{
+    return m_queue_size;
+}
 
-uint16_t tuya_ble_sched_queue_space_get()
+uint16_t tuya_ble_sched_queue_space_get(void)
 {
     uint16_t start = m_queue_start_index;
     uint16_t end   = m_queue_end_index;
     uint16_t free_space = m_queue_size - ((end >= start) ?
                                           (end - start) : (m_queue_size + 1 - start + end));
     return free_space;
+}
+
+
+uint16_t tuya_ble_sched_queue_events_get(void)
+{
+    uint16_t start = m_queue_start_index;
+    uint16_t end   = m_queue_end_index;
+    uint16_t number_of_events;
+    if(m_queue_size==0)
+    {
+        number_of_events = 0;
+    }
+    else
+    {
+        number_of_events = ((end >= start) ? (end - start) : (m_queue_size + 1 - start + end));
+    }
+    return number_of_events;
 }
 
 
@@ -117,7 +138,6 @@ static tuya_ble_status_t tuya_ble_sched_event_put(void const  * p_event_data, ui
     {
         uint16_t event_index = 0xFFFF;
 
-        //tuya_ble_device_enter_critical();
 
         if (!TUYA_BLE_SCHED_QUEUE_FULL())
         {
@@ -126,7 +146,6 @@ static tuya_ble_status_t tuya_ble_sched_event_put(void const  * p_event_data, ui
 
         }
 
-        //tuya_ble_device_exit_critical();
 
         if (event_index != 0xFFFF)
         {
@@ -164,8 +183,6 @@ static tuya_ble_status_t tuya_ble_sched_event_put(void const  * p_event_data, ui
 void tuya_sched_execute(void)
 {
     static tuya_ble_evt_param_t tuya_ble_evt;
-//    uint32_t i = 0;
-//    uint8_t data=0;
     tuya_ble_evt_param_t *evt;
     
     evt = &tuya_ble_evt;
@@ -178,10 +195,8 @@ void tuya_sched_execute(void)
         uint16_t event_index = m_queue_start_index;
 
         void * p_event_data;
-//        uint16_t event_data_size;
 
         p_event_data = &(m_queue_event_data[event_index * m_queue_event_size]);
-        //  event_data_size = m_queue_event_headers[event_index].event_data_size;
 
         memcpy(evt,p_event_data,sizeof(tuya_ble_evt_param_t));
         
@@ -193,6 +208,7 @@ void tuya_sched_execute(void)
         // so the queue entry occupied by this event can be used to store
         // a next one.
         m_queue_start_index = next_index(m_queue_start_index);
+
     }
 
 }
@@ -206,7 +222,7 @@ void tuya_ble_event_queue_init(void)
         TUYA_BLE_LOG_ERROR("ERROR!!TUYA_BLE_EVT_SIZE is not enough!");
         return;
     }
-    //TUYA_BLE_LOG("sizeof(tuya_ble_evt_param_t) = %d",sizeof(tuya_ble_evt_param_t));
+
     TUYA_BLE_SCHED_INIT(TUYA_BLE_EVT_SIZE, TUYA_BLE_EVT_MAX_NUM);
 }
 

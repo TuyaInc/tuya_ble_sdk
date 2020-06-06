@@ -24,100 +24,30 @@
 
 #include "tuya_ble_port.h"
 #include "tuya_ble_type.h"
-//#include "tuya_ble_internal_config.h"
 
-
-/*
- *@brief  Start advertising with params set by @ref tuya_ble_gap_adv_data_set.  
- *@param    
- *@return Operation result.
- *@retval TUYA_BLE_SUCCESS Start request success.
- *@retval other Start request failed.        
- *@note     
- *           
- * */
- /*
-__WEAK tuya_ble_status_t tuya_ble_gap_adv_start(void)
-{
-	return TUYA_BLE_SUCCESS;
-}
-*/
 /*
  *@brief    
  *@param    
  *        
- *@note
- 
-static const uint8_t adv_data[] =
-{
-    0x02,             // length 
-    GAP_ADTYPE_FLAGS, // type="Flags" 
-    GAP_ADTYPE_FLAGS_GENERAL | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
-    
-    0x0B,             // length 
-    GAP_ADTYPE_LOCAL_NAME_COMPLETE,// Local name 
-    'I', 'P', 'C', '_', 'C', 'A', 'M', 'E', 'R', 'A',
-    0x03,
-    GAP_ADTYPE_16BIT_MORE,
-    0x00, 0xA3,
-}; 
-
-static const uint8_t scan_rsp_data[] =
-{    
-    0x0E,                             // length 
-    GAP_ADTYPE_MANUFACTURER_SPECIFIC, // Manufacturer Specific Data 
-    HI_WORD(COMPANY_ID),
-    LO_WORD(COMPANY_ID),
-    0x00,0x02,
-    LO_WORD(DEVICE_TYPE),
-    'I', 'P', 'C','C', 'A', 'M', 'E', 'R',
-    
-};
- 
+ *@note     
  *           
  * */
- /*
-__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_adv_data_set(uint8_t const * p_ad_data, uint8_t ad_len,uint8_t const *p_sr_data, uint8_t sr_len)
-{
-	return TUYA_BLE_SUCCESS;
-}
-*/
 __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_advertising_adv_data_update(uint8_t const * p_ad_data, uint8_t ad_len)
 {
 	return TUYA_BLE_SUCCESS;
 }
-
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
 __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_advertising_scan_rsp_data_update(uint8_t const *p_sr_data, uint8_t sr_len)
 {
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
- *@brief  Stop advertising.  
- *@param    
- *        
- *@note     
- *           
- * */
-/*
-__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_adv_stop(void)
-{
-	return TUYA_BLE_SUCCESS;
-}
-*/
-/*
- *@brief    
- *@param    
- *        
- *@note     
- *           
- * */
-/*
-__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_update_conn_params(tuya_ble_gap_conn_param_t conn_params)
-{
-	return TUYA_BLE_SUCCESS;
-}
-*/
 /*
  *@brief    
  *@param    
@@ -200,6 +130,32 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_stop(void* timer_id)
 {
 	return TUYA_BLE_SUCCESS;
 }
+
+
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
+__TUYA_BLE_WEAK void tuya_ble_device_delay_ms(uint32_t ms)
+{
+    
+}
+
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
+__TUYA_BLE_WEAK void tuya_ble_device_delay_us(uint32_t us)
+{
+    
+}
+
 
 /*
  *@brief    
@@ -325,7 +281,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_erase(uint32_t addr,uint32_t size)
  *@note     
  *           
  * */
-__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t *p_data, uint32_t size)
+__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t *p_src, uint32_t size)
 {
 	return TUYA_BLE_SUCCESS;
 }
@@ -336,12 +292,45 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t 
  *@note     
  *           
  * */
-__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_read(uint32_t addr,uint8_t *p_data, uint32_t size)
+__TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_read(uint32_t addr,uint8_t *p_dest, uint32_t size)
 {
 	return TUYA_BLE_SUCCESS;
 }
 
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
+__TUYA_BLE_WEAK void tuya_ble_nv_erase_async(uint32_t addr,uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback)
+{
+	
+}
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
+__TUYA_BLE_WEAK void tuya_ble_nv_write_async(uint32_t addr,const uint8_t * p_src, uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback)
+{
+	
+}
 
+/*
+ *@brief    
+ *@param    
+ *        
+ *@note     
+ *           
+ * */
+__TUYA_BLE_WEAK void tuya_ble_nv_read_async(uint32_t addr,uint8_t * p_dest, uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback)
+{
+
+}
 
 /*
  *@brief    
@@ -367,8 +356,6 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_common_uart_send_data(const uint8_t *
     return TUYA_BLE_SUCCESS;
 }
 
-
-//#if TUYA_BLE_USE_OS
 
 /*
  *@brief    
@@ -483,7 +470,6 @@ __TUYA_BLE_WEAK bool tuya_ble_event_queue_send_port(tuya_ble_evt_param_t *evt, u
 	return true;
 }
 
-//#endif
 
 
 /**
@@ -600,7 +586,6 @@ __TUYA_BLE_WEAK bool tuya_ble_hmac_sha256_crypt(const uint8_t *key, uint32_t key
 	return true;
 }
 
-#if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==1)
 
 /**
  * \brief    Allocate a memory block with required size.
@@ -626,6 +611,5 @@ __TUYA_BLE_WEAK void *tuya_ble_port_malloc( uint32_t size );
 __TUYA_BLE_WEAK void tuya_ble_port_free( void *pv );
 
 
-#endif
 
 

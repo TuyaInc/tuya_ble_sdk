@@ -124,8 +124,18 @@ __TUYA_BLE_WEAK void tuya_ble_handle_connect_change_evt(tuya_ble_evt_param_t *ev
 
 }
 
+__TUYA_BLE_WEAK void tuya_ble_handle_connecting_request_evt(tuya_ble_evt_param_t *evt)
+{
+    
+}
 
 __TUYA_BLE_WEAK void tuya_ble_handle_ble_data_evt(uint8_t *buf,uint16_t len)
+{
+   
+}
+
+
+__TUYA_BLE_WEAK void tuya_ble_handle_save_sys_settings_callback_evt(tuya_ble_evt_param_t *evt)
 {
    
 }

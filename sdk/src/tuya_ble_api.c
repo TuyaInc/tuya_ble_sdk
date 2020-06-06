@@ -35,6 +35,7 @@
 #include "tuya_ble_utils.h"
 #include "tuya_ble_sdk_version.h"
 #include "tuya_ble_gatt_send_queue.h"
+#include "tuya_ble_event.h"
 
 static uint8_t m_callback_numbers = 0;
 
@@ -106,16 +107,37 @@ tuya_ble_status_t tuya_ble_callback_queue_register(tuya_ble_callback_t cb)
 }
 
 /**
- * @brief   Function for executing all enqueued tasks.
+ * @brief   Function for get scheduler queue size.
  *
- * @note    This function must be called from within the main loop. It will
- * execute all events scheduled since the last time it was called.
+ * @note    If it returns 0, it means that the queue has not been initialized.
+ *
  * */
+uint16_t tuya_ble_scheduler_queue_size_get(void)
+{
+    return tuya_ble_sched_queue_size_get();
+}
 
-//__WEAK void tuya_ble_main_tasks_exec(void)
-//{
+/**
+ * @brief   Function for get queue free space.
+ *
+ * @note
+ *
+ * */
+uint16_t tuya_ble_scheduler_queue_space_get(void)
+{
+    return tuya_ble_sched_queue_space_get();
+}
 
-//}
+/**
+ * @brief   Function for get the number of current events in the queue.
+ *
+ * @note
+ *
+ * */
+uint16_t tuya_ble_scheduler_queue_events_get(void)
+{
+    return tuya_ble_sched_queue_events_get();
+}
 
 #endif
 
@@ -258,7 +280,6 @@ tuya_ble_status_t tuya_ble_common_uart_receive_data(uint8_t *p_data,uint16_t len
 {
     tuya_ble_status_t ret = TUYA_BLE_ERR_NOT_FOUND;
     tuya_ble_evt_param_t event;
-   // uint16_t rev_len,data_len;
     uint8_t* uart_evt_buffer;
     uint16_t i;
 
@@ -505,7 +526,7 @@ tuya_ble_status_t tuya_ble_dp_data_report(uint8_t *p_data,uint32_t len)
 
     if((len>TUYA_BLE_REPORT_MAX_DP_DATA_LEN)||(len==0))
     {
-		TUYA_BLE_LOG_ERROR("report dp data len error,data len = %d , max data len = %d",len,TUYA_BLE_REPORT_MAX_DP_DATA_LEN);
+        TUYA_BLE_LOG_ERROR("report dp data len error,data len = %d , max data len = %d",len,TUYA_BLE_REPORT_MAX_DP_DATA_LEN);
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
     ret = data_2_klvlist(p_data,len,&list,0);
@@ -998,8 +1019,39 @@ void tuya_ble_connect_monitor_timer_stop(void)
 
 }
 
+/*
+ *@brief
+ *@param [in]on_off: 0-off ,1 - on.
+ *
+ *@note
+ *
+ * */
+tuya_ble_status_t tuya_ble_adv_data_connecting_request_set(uint8_t on_off)
+{
+    tuya_ble_connect_status_t currnet_connect_status;
+    tuya_ble_evt_param_t evt;
 
+    if(on_off>1)
+    {
+        return TUYA_BLE_ERR_INVALID_PARAM;
+    }
+    currnet_connect_status = tuya_ble_connect_status_get();
+    if((currnet_connect_status != BONDING_UNCONN)&&(currnet_connect_status!= UNBONDING_UNCONN))
+    {
+        return TUYA_BLE_ERR_INVALID_STATE;
+    }
 
+    evt.hdr.event = TUYA_BLE_EVT_CONNECTING_REQUEST;
+    evt.connecting_request_data.cmd = on_off;
+
+    if(tuya_ble_event_send(&evt)!=0)
+    {
+        return TUYA_BLE_ERR_NO_EVENT;
+    }
+
+    return TUYA_BLE_SUCCESS;
+
+}
 
 extern tuya_ble_parameters_settings_t tuya_ble_current_para;
 
@@ -1043,72 +1095,102 @@ void tuya_ble_disconnected_handler(void)
     }
 }
 
+
 /*
- *@brief
+ *@brief Function for initialize the tuya sdk.
  *@param
  *
  *@note
- *
- * */
-tuya_ble_status_t tuya_ble_sdk_init(tuya_ble_device_param_t * param_data)
+ * Initialization example：
+
+static void tuya_ble_sdk_init_async_completed(void *p_param,tuya_ble_status_t result)
 {
-    tuya_ble_cb_evt_param_t event;
-    uint8_t device_id_temp[16];
-    uint8_t device_id_temp2[20];
-
-#if (!TUYA_BLE_DEVICE_AUTH_DATA_STORE)
-    if((param_data->device_id_len!=16)&&(param_data->device_id_len!=20))
+    if(result==TUYA_BLE_SUCCESS)
     {
-        TUYA_BLE_LOG_ERROR("tuya_ble_sdk_init param_data->device_id_len error.");
-        return TUYA_BLE_ERR_INVALID_PARAM;
-    }
-#endif
+        tuya_ble_callback_queue_register(tuya_cb_handler);
 
-    tuya_ble_storage_init();
+        tuya_ota_init();
 
-    if(param_data->product_id_len>0)       //
-    {
-        tuya_ble_current_para.pid_type = param_data->p_type;
-
-        tuya_ble_current_para.pid_len = param_data->product_id_len;
-
-        if(tuya_ble_current_para.pid_len>TUYA_BLE_PRODUCT_ID_MAX_LEN)
-        {
-            tuya_ble_current_para.pid_len = TUYA_BLE_PRODUCT_ID_MAX_LEN;
-        }
-
-        memcpy(tuya_ble_current_para.pid,param_data->product_id,tuya_ble_current_para.pid_len);
-    }
-
-#if (!TUYA_BLE_DEVICE_AUTH_DATA_STORE)
-    if(param_data->device_id_len == 20)
-    {
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_20 ",param_data->device_id, 20);
-        tuya_ble_device_id_20_to_16(param_data->device_id,device_id_temp);
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_16 ",device_id_temp, 16);
-        tuya_ble_device_id_16_to_20(device_id_temp,device_id_temp2);
-        TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_20 ", device_id_temp2, 20);
-        memcpy(tuya_ble_current_para.auth_settings.device_id,device_id_temp,DEVICE_ID_LEN);
+        TUYA_APP_LOG_INFO("tuya sdk init succeed.");
+        TUYA_APP_LOG_INFO("app version : "TY_APP_VER_STR);
     }
     else
     {
-        memcpy(tuya_ble_current_para.auth_settings.device_id,param_data->device_id,DEVICE_ID_LEN);
+        TUYA_APP_LOG_INFO("tuya sdk init failed.");
     }
+}
 
-    memcpy(tuya_ble_current_para.auth_settings.auth_key,param_data->auth_key,AUTH_KEY_LEN);
-
-    tuya_ble_current_para.sys_settings.bound_flag = param_data->bound_flag;
-
-    if(tuya_ble_current_para.sys_settings.bound_flag)
-    {
-        memcpy(tuya_ble_current_para.sys_settings.login_key,param_data->login_key,LOGIN_KEY_LEN);
-    }
+void tuya_ble_app_init(void)
+{
+    memset(&device_param,0,sizeof(tuya_ble_device_param_t));
+    device_param.device_id_len = 16;
+    memcpy(device_param.auth_key,(void *)auth_key_test,AUTH_KEY_LEN);
+    memcpy(device_param.device_id,(void *)device_id_test,DEVICE_ID_LEN);
     
-#else
+    device_param.p_type = TUYA_BLE_PRODUCT_ID_TYPE_PID;
+    device_param.product_id_len = 8;
+    memcpy(device_param.product_id,APP_PRODUCT_ID,8);
+    device_param.firmware_version = TY_APP_VER_NUM;
+    device_param.hardware_version = TY_HARD_VER_NUM;
 
-    if((param_data->device_id_len==16)||(param_data->device_id_len==20))
+    tuya_ble_sdk_init_async(&device_param,tuya_ble_sdk_init_async_completed);
+    
+        
+}
+
+ * */
+
+static tuya_ble_nv_async_callback_t tuya_ble_sdk_init_async_callback = NULL;
+static uint8_t tuya_ble_sdk_init_flag = 0;
+
+static void tuya_ble_storage_init_async_completed(void *p_param,tuya_ble_status_t result)
+{
+    uint8_t device_id_temp[16];
+    uint8_t device_id_temp2[20];
+    tuya_ble_device_param_t * param_data = (tuya_ble_device_param_t *)p_param;
+
+    if (result == TUYA_BLE_SUCCESS)
     {
-        if(tuya_ble_buffer_value_is_all_x(tuya_ble_current_para.auth_settings.auth_key,AUTH_KEY_LEN,0))
+        if(param_data->product_id_len>0)       //
+        {
+            tuya_ble_current_para.pid_type = param_data->p_type;
+
+            tuya_ble_current_para.pid_len = param_data->product_id_len;
+
+            if(tuya_ble_current_para.pid_len>TUYA_BLE_PRODUCT_ID_MAX_LEN)
+            {
+                tuya_ble_current_para.pid_len = TUYA_BLE_PRODUCT_ID_MAX_LEN;
+            }
+
+            memcpy(tuya_ble_current_para.pid,param_data->product_id,tuya_ble_current_para.pid_len);
+        }
+
+#if (!TUYA_BLE_DEVICE_AUTH_DATA_STORE)
+        if(param_data->device_id_len == 20)
+        {
+            TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_20 ",param_data->device_id, 20);
+            tuya_ble_device_id_20_to_16(param_data->device_id,device_id_temp);
+            TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_16 ",device_id_temp, 16);
+            tuya_ble_device_id_16_to_20(device_id_temp,device_id_temp2);
+            TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id_20 ", device_id_temp2, 20);
+            memcpy(tuya_ble_current_para.auth_settings.device_id,device_id_temp,DEVICE_ID_LEN);
+        }
+        else
+        {
+            memcpy(tuya_ble_current_para.auth_settings.device_id,param_data->device_id,DEVICE_ID_LEN);
+        }
+
+        memcpy(tuya_ble_current_para.auth_settings.auth_key,param_data->auth_key,AUTH_KEY_LEN);
+
+        tuya_ble_current_para.sys_settings.bound_flag = param_data->bound_flag;
+
+        if(tuya_ble_current_para.sys_settings.bound_flag)
+        {
+            memcpy(tuya_ble_current_para.sys_settings.login_key,param_data->login_key,LOGIN_KEY_LEN);
+        }
+
+#else
+        if((param_data->device_id_len==16)||(param_data->device_id_len==20))
         {
             if(param_data->device_id_len == 20)
             {
@@ -1125,46 +1207,80 @@ tuya_ble_status_t tuya_ble_sdk_init(tuya_ble_device_param_t * param_data)
             }
 
             memcpy(tuya_ble_current_para.auth_settings.auth_key,param_data->auth_key,AUTH_KEY_LEN);
-                  
-            tuya_ble_storage_save_auth_settings();
-            tuya_ble_storage_save_sys_settings();            
         }
-    }
+
 #endif
 
-    tuya_ble_set_device_version(param_data->firmware_version,param_data->hardware_version);
+        tuya_ble_set_device_version(param_data->firmware_version,param_data->hardware_version);
 
-    tuya_ble_set_external_mcu_version(0,0);//Initialize to 0
+        tuya_ble_set_external_mcu_version(0,0);//Initialize to 0
 
-    if(tuya_ble_current_para.sys_settings.bound_flag==1)
-    {
-        tuya_ble_connect_status_set(BONDING_UNCONN);
+        if(tuya_ble_current_para.sys_settings.bound_flag==1)
+        {
+            tuya_ble_connect_status_set(BONDING_UNCONN);
+        }
+        else
+        {
+            tuya_ble_connect_status_set(UNBONDING_UNCONN);
+        }
+
+        tuya_ble_adv_change();
+
+        tuya_ble_event_init();
+
+        tuya_ble_gatt_send_queue_init();
+
+        tuya_ble_common_uart_init();
+
+        tuya_ble_connect_monitor_timer_init();
+
+        TUYA_BLE_LOG_HEXDUMP_INFO("product_id", tuya_ble_current_para.pid, tuya_ble_current_para.pid_len);
+        TUYA_BLE_LOG_HEXDUMP_INFO("device_uuid", tuya_ble_current_para.auth_settings.device_id, DEVICE_ID_LEN);
+        TUYA_BLE_LOG_INFO("bond_flag = %d", tuya_ble_current_para.sys_settings.bound_flag);
+
+        TUYA_BLE_LOG_INFO("tuya ble sdk version : "TUYA_BLE_SDK_VERSION_STR);
     }
     else
     {
-        tuya_ble_connect_status_set(UNBONDING_UNCONN);
+        TUYA_BLE_LOG_ERROR("tuya ble sdk init failed.");
     }
 
-    tuya_ble_adv_change();
+    if(tuya_ble_sdk_init_async_callback)
+        tuya_ble_sdk_init_async_callback(NULL,result);
+    tuya_ble_sdk_init_flag = 0;
+    tuya_ble_sdk_init_async_callback = NULL;
 
-    tuya_ble_event_init();
-	
-	tuya_ble_gatt_send_queue_init();
+}
 
-    tuya_ble_common_uart_init();
-    
-    tuya_ble_connect_monitor_timer_init();
-    
-    TUYA_BLE_LOG_HEXDUMP_DEBUG("mac", tuya_ble_current_para.auth_settings.mac, MAC_LEN);
-    TUYA_BLE_LOG_HEXDUMP_DEBUG("product_id", tuya_ble_current_para.pid, tuya_ble_current_para.pid_len);
-    TUYA_BLE_LOG_HEXDUMP_DEBUG("device_id", tuya_ble_current_para.auth_settings.device_id, DEVICE_ID_LEN);
-//    TUYA_BLE_LOG_HEXDUMP_DEBUG("auth_key", tuya_ble_current_para.auth_settings.auth_key, AUTH_KEY_LEN);
-//    TUYA_BLE_LOG_HEXDUMP_DEBUG("login_key", tuya_ble_current_para.sys_settings.login_key, LOGIN_KEY_LEN);
-    TUYA_BLE_LOG_DEBUG("bond_flag = %d", tuya_ble_current_para.sys_settings.bound_flag);
 
-    TUYA_BLE_LOG_INFO("tuya ble sdk version : "TUYA_BLE_SDK_VERSION_STR);
+void tuya_ble_sdk_init_async(tuya_ble_device_param_t * param_data,tuya_ble_nv_async_callback_t callback)
+{
 
-    return TUYA_BLE_SUCCESS;
+    if(tuya_ble_sdk_init_flag)
+    {
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_BUSY);
+        return;
+    }
+    else
+    {
+        tuya_ble_sdk_init_flag = 1;
+    }
+#if (!TUYA_BLE_DEVICE_AUTH_DATA_STORE)
+    if((param_data->device_id_len!=16)&&(param_data->device_id_len!=20))
+    {
+        TUYA_BLE_LOG_ERROR("tuya_ble_sdk_init param_data->device_id_len error.");
+        if(callback)
+            callback(NULL,TUYA_BLE_ERR_INVALID_PARAM);
+        tuya_ble_sdk_init_flag = 0;
+        return;
+    }
+#endif
+    tuya_ble_sdk_init_async_callback = callback;
+
+    tuya_ble_storage_init_async(param_data,tuya_ble_storage_init_async_completed);
+
+
 }
 
 

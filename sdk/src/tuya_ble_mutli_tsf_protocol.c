@@ -117,18 +117,12 @@ frame_total_t get_trsmitr_frame_total_len(frm_trsmitr_proc_s *frm_trsmitr)
 }
 
 /***********************************************************
-*  Function: get_trsmitr_frame_type
+*  Function: get_trsmitr_frame_version
 *  description:
 *  Input: transmitter handle
 *  Output:
-*  Return: frame_type_t
+*  Return: 
 ***********************************************************/
-//frame_type_t get_trsmitr_frame_type(frm_trsmitr_proc_s *frm_trsmitr)
-//{
-//    return frm_trsmitr->type;
-//}
-
-
 uint8_t get_trsmitr_frame_version(frm_trsmitr_proc_s *frm_trsmitr)
 {
     return frm_trsmitr->version;
@@ -442,7 +436,7 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
         goto err_ret;
     }
 
-    //klv_node_s *node = (klv_node_s *)malloc(sizeof(klv_node_s)+len);
+    
     node = (klv_node_s *)tuya_ble_malloc(sizeof(klv_node_s));
 
     if(NULL == node)
@@ -472,8 +466,7 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
         node->data[3] = (tmp >> 0) & 0xff;
     } 
     else
-    {
-        //memcpy((void *restrict)node->data,(unsigned char*)data,len);
+    {    
         memcpy((void *)node->data,(uint8_t*)data,len);
     }
     node->next = list;
@@ -555,13 +548,11 @@ mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type
     }
 
     uint32_t offset = 0;
-//    unsigned char *alloc_dpdata;
     klv_node_s *klv_list = NULL;
     klv_node_s *node = NULL;
     do
     {
         // not full klv
-        //if((len-offset) < (sizeof(klv_node_s)-sizeof(struct s_klv_node *)))
         if(type == 1)
         {
             if((len-offset) < 4)
@@ -579,7 +570,6 @@ mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type
             }
         }
 
-        //node = (klv_node_s *)tuya_malloc(sizeof(klv_node_s)+data[(2+offset)]);
         node = (klv_node_s *)tuya_ble_malloc(sizeof(klv_node_s));
         if(NULL == node)
         {

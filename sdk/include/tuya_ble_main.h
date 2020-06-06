@@ -44,32 +44,13 @@ uint8_t tuya_ble_event_send(tuya_ble_evt_param_t *evt);
 
 uint8_t tuya_ble_cb_event_send(tuya_ble_cb_evt_param_t *evt);
 
+uint8_t tuya_ble_get_adv_connect_request_bit_status(void);
+
 void tuya_ble_adv_change(void);
 
+void tuya_ble_adv_change_with_connecting_request(void);
+
 tuya_ble_status_t tuya_ble_inter_event_response(tuya_ble_cb_evt_param_t *param);
-
-/*
-void tuya_ble_handle_device_info_update_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_dp_data_reported_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_dp_data_with_time_reported_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_factory_reset_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_ota_response_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_data_passthrough_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_uart_cmd_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_ble_cmd_evt(tuya_ble_evt_param_t *evt);
-
-void tuya_ble_handle_net_config_response_evt(tuya_ble_evt_param_t *evt);
-*/
-
-
-
 
 
 #ifdef __cplusplus

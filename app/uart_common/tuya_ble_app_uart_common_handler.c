@@ -47,14 +47,11 @@
 #define TUYA_BLE_OTA_MCU_TYPE 1
 
 
-
-
 #define TUYA_BLE_UART_COMMON_MCU_OTA_REQUEST			    0xEA
 #define TUYA_BLE_UART_COMMON_MCU_OTA_FILE_INFO			    0xEB
 #define TUYA_BLE_UART_COMMON_MCU_OTA_FILE_OFFSET	        0xEC
 #define TUYA_BLE_UART_COMMON_MCU_OTA_DATA 			        0xED
 #define TUYA_BLE_UART_COMMON_MCU_OTA_END			        0xEE
-
 
 
 #if (!TUYA_BLE_OTA_MCU_TEST)
@@ -63,7 +60,6 @@
 void tuya_ble_uart_common_mcu_ota_data_from_ble_handler(uint16_t cmd,uint8_t*recv_data,uint32_t recv_len)
 {
     static uint8_t uart_data_temp[42];
-    //uint8_t uart_cmd = 0xFF;
     uint8_t *uart_data_buffer = NULL;
     uint8_t uart_data_len = 0;
 
@@ -424,8 +420,6 @@ void tuya_ble_uart_common_mcu_ota_data_from_ble_handler(uint16_t cmd,uint8_t*rec
 
     tuya_ble_common_uart_send_data(uart_data_buffer,uart_data_len+1);
 
-    //tuya_ble_ota_data_process_test(uart_data_buffer,uart_data_len+1);
-
     TUYA_BLE_LOG_HEXDUMP_DEBUG("mcu ota uart send data : ",uart_data_buffer,uart_data_len+1);
 
     if(cmd==FRM_OTA_DATA_REQ)
@@ -535,7 +529,6 @@ void tuya_ble_uart_common_process(uint8_t *p_in_data,uint16_t in_len)
     uint8_t cmd = p_in_data[3];
     uint16_t data_len = (p_in_data[4]<<8) + p_in_data[5];
     uint8_t *data_buffer = p_in_data+6;
-    //tuya_ble_connect_status_t ble_state;
     uint32_t mcu_firmware_version = 0,mcu_hardware_version = 0;
     switch(cmd)
     {
@@ -555,10 +548,7 @@ void tuya_ble_uart_common_process(uint8_t *p_in_data,uint16_t in_len)
             tuya_ble_device_update_product_id(TUYA_BLE_PRODUCT_ID_TYPE_PID,8,data_buffer);
 
         }
-//        tuya_ble_heartbeat_timeout_ms = 10000;
-//        tuya_ble_heartbeat_timer_delete();
-//        tuya_ble_heartbeat_timer_create();
-//        tuya_ble_heartbeat_timer_start();
+
         tuya_ble_heartbeat_timer_restart(10000);
         tuya_ble_common_uart_protocol_send(TUYA_BLE_UART_COMMON_CK_MCU_TYPE,NULL,0);
         tuya_ble_common_uart_protocol_send(TUYA_BLE_UART_COMMON_QUERY_MCU_VERSION,NULL,0);
@@ -576,7 +566,7 @@ void tuya_ble_uart_common_process(uint8_t *p_in_data,uint16_t in_len)
         mcu_hardware_version = (data_buffer[3]<<16)|(data_buffer[4]<<8)|(data_buffer[5]);
         TUYA_BLE_LOG_DEBUG("reveived mcu_firmware_version : 0x%04x mcu_hardware_version : 0x%04x",mcu_firmware_version,mcu_hardware_version);
         tuya_ble_device_update_mcu_version(mcu_firmware_version,mcu_hardware_version);
-        // tuya_ble_common_uart_protocol_send(TUYA_BLE_UART_COMMON_QUERY_MCU_VERSION,NULL,0);
+
         break;
 
     case TUYA_BLE_UART_COMMON_MCU_SEND_VERSION:
@@ -675,7 +665,6 @@ static void mcu_ota_current_para_init(void)
 void mcu_ota_test_init(void)
 {
     mcu_ota_current_para_init();
-    //tuya_ble_device_update_mcu_version(CURRENT_MCU_FIRMWARE_VERSION,0x010000);
     tuya_ble_heartbeat_timer_create();
     tuya_ble_heartbeat_timer_start();
 }

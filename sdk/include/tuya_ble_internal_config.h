@@ -41,8 +41,6 @@
 #define MAX_NUMBER_OF_TUYA_MESSAGE        0x10      //!<  tuya ble message queue size
 
 #define TUYA_BLE_AIR_FRAME_MAX  1024
-//#define TUYA_BLE_BLE_MEM_SIZE   TUYA_BLE_AIR_FRAME_MAX
-//#define TUYA_BLE_UART_MEM_SIZE  256
 
 
 #define TUYA_UART_RECEIVE_MAX_DP_DATA_LEN         (255+4)
@@ -54,7 +52,7 @@
 
 #define TUYA_BLE_TRANSMISSION_MAX_DATA_LEN       (TUYA_BLE_AIR_FRAME_MAX-29)
 
-//BLE 通讯协议版本 v3.3 
+//BLE Communication protocol version v3.3 
 #define TUYA_BLE_PROTOCOL_VERSION_HIGN   0x03
 #define TUYA_BLE_PROTOCOL_VERSION_LOW    0x03
 

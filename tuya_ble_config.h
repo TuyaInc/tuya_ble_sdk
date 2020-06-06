@@ -122,6 +122,14 @@
 #define  TUYA_BLE_SECURE_CONNECTION_TYPE  TUYA_BLE_SECURE_CONNECTION_WITH_AUTH_KEY
 #endif 
 
+
+/*
+ * if 1 ,ble sdk will update mac address with with the address of the authorization information.
+ */
+#ifndef  TUYA_BLE_DEVICE_MAC_UPDATE
+#define  TUYA_BLE_DEVICE_MAC_UPDATE         0 
+#endif
+
 /*
  * if 1 ,after update mac will reset.
  */
@@ -163,11 +171,11 @@
 #endif
 
 /*
- * if defined ,enable log output
+ * if defined ,enable sdk log output
  */
 
-#ifndef TUYA_BLE_LOG_ENABLED
-//#define TUYA_BLE_LOG_ENABLED 
+#ifndef TUYA_BLE_LOG_ENABLE
+#define TUYA_BLE_LOG_ENABLE 0 
 #endif
 
 #ifndef TUYA_BLE_LOG_COLORS_ENABLE
@@ -176,6 +184,23 @@
 
 #ifndef TUYA_BLE_LOG_LEVEL
 #define TUYA_BLE_LOG_LEVEL  TUYA_BLE_LOG_LEVEL_DEBUG
+#endif
+
+
+/*
+ * if defined ,enable app log output
+ */
+
+#ifndef TUYA_APP_LOG_ENABLE
+#define TUYA_APP_LOG_ENABLE 0 
+#endif
+
+#ifndef TUYA_APP_LOG_COLORS_ENABLE
+#define TUYA_APP_LOG_COLORS_ENABLE  0
+#endif 
+
+#ifndef TUYA_APP_LOG_LEVEL
+#define TUYA_APP_LOG_LEVEL  TUYA_APP_LOG_LEVEL_DEBUG
 #endif
 
 /*
@@ -206,6 +231,14 @@
 #define TUYA_NV_AREA_SIZE              (4*TUYA_NV_ERASE_MIN_SIZE)
 #endif
 
+/*MACRO for production test module*/
+#ifndef TUYA_BLE_APP_VERSION_STRING
+#define TUYA_BLE_APP_VERSION_STRING  "1.0" 	
+#endif
+
+#ifndef TUYA_BLE_APP_BUILD_FIRMNAME_STRING
+#define TUYA_BLE_APP_BUILD_FIRMNAME_STRING  "tuya_ble_sdk_app_demo_xxx"  
+#endif
 
 #endif
 

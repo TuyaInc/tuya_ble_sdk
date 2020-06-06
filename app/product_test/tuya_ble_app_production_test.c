@@ -38,6 +38,7 @@
 #include "tuya_ble_storage.h"
 #include "tuya_ble_app_production_test.h"
 #include "tuya_ble_log.h"
+#include "tuya_ble_api.h"
 
 
 #if defined(CUSTOMIZED_TUYA_BLE_APP_PRODUCT_TEST_HEADER_FILE)
@@ -47,20 +48,24 @@
 
 #if (TUYA_BLE_DEVICE_REGISTER_FROM_BLE&&TUYA_BLE_DEVICE_AUTH_DATA_STORE)
 
-#if !defined(APP_BUILD_FIRMNAME)
-#define APP_BUILD_FIRMNAME "tuya_ble_sdk_app_demo_xxx"
-#endif
-
-#if !defined(TY_APP_VER_STR)
-#define TY_APP_VER_STR "1.0"
-#endif
-
-
 static uint8_t tuya_ble_production_test_flag = 0;
+
+static uint8_t tuya_ble_production_test_with_ble_flag = 0;
+
+static uint8_t tuya_ble_storage_write_auth_key_device_id_mac_flag = 0;
+
+static uint8_t tuya_ble_storage_write_hid_flag = 0;
 
 #define tuya_ble_prod_monitor_timeout_ms  60000  //60s
 
 tuya_ble_timer_t tuya_ble_xTimer_prod_monitor;
+
+
+void tuya_ble_internal_production_test_with_ble_flag_clear(void)
+{
+    tuya_ble_production_test_with_ble_flag = 0;
+}
+
 
 static void tuya_ble_vtimer_prod_monitor_callback(tuya_ble_timer_t pxTimer)
 {
@@ -166,6 +171,10 @@ static void tuya_ble_auc_enter(uint8_t *para, uint16_t len)
     tuya_ble_prod_beacon_scan_start();
 
     tuya_ble_production_test_flag = 1;
+    
+    tuya_ble_storage_write_auth_key_device_id_mac_flag = 0;
+
+    tuya_ble_storage_write_hid_flag = 0;
 
     tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_ENTER,buf,1);
 }
@@ -268,6 +277,24 @@ static void tuya_ble_prod_asciitohex(uint8_t *ascbuf,uint8_t len,uint8_t *hexbuf
     
 }
 
+static void tuya_ble_storage_write_auth_key_device_id_mac_async_completed(void *p_param,tuya_ble_status_t result)
+{
+    char true_buf[] = "{\"ret\":true}";
+    char false_buf[] = "{\"ret\":false}";
+    
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)true_buf,strlen(true_buf));
+        TUYA_BLE_LOG_DEBUG("AUC WRITE AUTH INFO successed!"); 
+    }
+    else
+    {
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)false_buf,strlen(false_buf));
+        TUYA_BLE_LOG_ERROR("AUC_CMD_WRITE_AUTH_INFO failed!");
+    }
+    tuya_ble_storage_write_auth_key_device_id_mac_flag = 0;
+}
+
 static  void tuya_ble_auc_write_auth_info(uint8_t *para, uint16_t len)
 {
     uint8_t mac_temp[6];
@@ -282,20 +309,15 @@ static  void tuya_ble_auc_write_auth_info(uint8_t *para, uint16_t len)
     
     TUYA_BLE_LOG_DEBUG("AUC WRITE AUTH INFO!");    
         
-    /*//6
-      {//1
+    /*
+      {
       "auzkey":"xxxx",    //"6":"32",         7   +  6+4
       "uuid":"xxxx",      //"4":"16",         7   +6+32+6   +    4+4
       "mac":"xxxxxx",     //"3":"12",
       "prod_test":"xxxx"    //"9":"4/5"
       }
       */
-      /*
-      memcpy(alloc_buf,para,len);
-      tuya_log_d("\n###write auth info:%s,len:%d\n",alloc_buf,len);
-      memset(alloc_buf,0,len);
-      */
-    
+   
     if(len<100)
     {
         tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)false_buf,strlen(false_buf));
@@ -313,15 +335,15 @@ static  void tuya_ble_auc_write_auth_info(uint8_t *para, uint16_t len)
     memcpy(mac_char,&para[78],12);
     tuya_ble_prod_asciitohex(mac_char,12,mac_temp);
 
-    if(tuya_ble_storage_write_auth_key_device_id_mac(&para[11],AUTH_KEY_LEN,&para[53],DEVICE_ID_LEN,mac_temp,MAC_LEN,mac_char,MAC_LEN*2)==TUYA_BLE_SUCCESS)
+    if(tuya_ble_storage_write_auth_key_device_id_mac_flag)
     {
-        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)true_buf,strlen(true_buf));
-        TUYA_BLE_LOG_DEBUG("AUC WRITE AUTH INFO successed!"); 
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)false_buf,strlen(false_buf));
+        TUYA_BLE_LOG_ERROR("AUC_CMD_WRITE_AUTH_INFO busy!");
     }
     else
     {
-        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_AUTH_INFO,(uint8_t *)false_buf,strlen(false_buf));
-        TUYA_BLE_LOG_ERROR("AUC_CMD_WRITE_AUTH_INFO failed!");
+        tuya_ble_storage_write_auth_key_device_id_mac_flag = 1;
+        tuya_ble_storage_write_auth_key_device_id_mac_async(&para[11],AUTH_KEY_LEN,&para[53],DEVICE_ID_LEN,mac_temp,MAC_LEN,mac_char,MAC_LEN*2,tuya_ble_storage_write_auth_key_device_id_mac_async_completed);
     }
            
 }
@@ -406,8 +428,7 @@ static void tuya_ble_auc_query_info(uint8_t *para, uint16_t len)
     alloc_buf[i++] = '\"';
     alloc_buf[i++] = ':';
     alloc_buf[i++] = '\"';
-    //tuya_ble_hextoascii(tuya_ble_current_para.auth_settings.mac,6,mac_temp);
-   // TUYA_BLE_LOG_HEXDUMP_DEBUG("mac temp :",tuya_ble_current_para.auth_settings.mac_string,MAC_LEN*2);
+
     memcpy( &alloc_buf[i],tuya_ble_current_para.auth_settings.mac_string,MAC_LEN*2);
     i += MAC_LEN*2;
     alloc_buf[i++] = '\"';
@@ -419,8 +440,8 @@ static void tuya_ble_auc_query_info(uint8_t *para, uint16_t len)
     alloc_buf[i++] = '\"';
     alloc_buf[i++] = ':';
     alloc_buf[i++] = '\"';
-    memcpy(&alloc_buf[i],APP_BUILD_FIRMNAME,strlen(APP_BUILD_FIRMNAME));
-    i+=strlen(APP_BUILD_FIRMNAME);
+    memcpy(&alloc_buf[i],TUYA_BLE_APP_BUILD_FIRMNAME_STRING,strlen(TUYA_BLE_APP_BUILD_FIRMNAME_STRING));
+    i+=strlen(TUYA_BLE_APP_BUILD_FIRMNAME_STRING);
     alloc_buf[i++] = '\"';
 
     alloc_buf[i++] = ',';
@@ -430,8 +451,8 @@ static void tuya_ble_auc_query_info(uint8_t *para, uint16_t len)
     alloc_buf[i++] = '\"';
     alloc_buf[i++] = ':';
     alloc_buf[i++] = '\"';
-    memcpy(&alloc_buf[i],TY_APP_VER_STR,strlen(TY_APP_VER_STR));
-    i+=strlen(TY_APP_VER_STR);
+    memcpy(&alloc_buf[i],TUYA_BLE_APP_VERSION_STRING,strlen(TUYA_BLE_APP_VERSION_STRING));
+    i+=strlen(TUYA_BLE_APP_VERSION_STRING);
     alloc_buf[i++] = '\"';
 
     alloc_buf[i++] = ',';
@@ -450,7 +471,6 @@ static void tuya_ble_auc_query_info(uint8_t *para, uint16_t len)
 
     tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_QUERY_INFO,(uint8_t *)alloc_buf,i-1);
     
-    //TUYA_BLE_LOG_HEXDUMP_DEBUG("AUC_CMD_QUERY_INFO RESPONSE DATA:",alloc_buf,i-1);
     TUYA_BLE_LOG_DEBUG("AUC_CMD_QUERY_INFO RESPONSE!");
     
     tuya_ble_free(alloc_buf);
@@ -475,6 +495,27 @@ static void tuya_ble_auc_reset(uint8_t *para, uint16_t len)
 }
 
 
+
+static void tuya_ble_storage_write_hid_async_completed(void *p_param,tuya_ble_status_t result)
+{
+    char true_buf[] = "{\"ret\":true}";
+    char false_buf[] = "{\"ret\":false}";
+    
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)true_buf,strlen(true_buf));
+        TUYA_BLE_LOG_DEBUG("WRITE AUTH HID successed."); 
+    }
+    else
+    {
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)false_buf,strlen(false_buf));
+        TUYA_BLE_LOG_ERROR("WRITE AUTH HID failed."); 
+    }
+    
+    tuya_ble_storage_write_hid_flag = 0;
+    
+}
+
 static  void tuya_ble_auc_write_hid(uint8_t *para, uint16_t len)
 {
     uint8_t hid[19];
@@ -488,12 +529,6 @@ static  void tuya_ble_auc_write_hid(uint8_t *para, uint16_t len)
     
     TUYA_BLE_LOG_DEBUG("AUC WRITE AUTH HID!");    
     
-    /*//6
-      {//1
-      "hid":"xxxx"    //"3":"19"
-      }
-      */
-  
     if(len<27)
     {
         tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)false_buf,strlen(false_buf));
@@ -510,19 +545,16 @@ static  void tuya_ble_auc_write_hid(uint8_t *para, uint16_t len)
            
 	memcpy(hid,&para[8],H_ID_LEN);
 	
-    if(tuya_ble_storage_write_hid(hid,H_ID_LEN)==TUYA_BLE_SUCCESS)
+    if(tuya_ble_storage_write_hid_flag)
     {
-        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)true_buf,strlen(true_buf));
-        TUYA_BLE_LOG_DEBUG("WRITE AUTH HID successed."); 
+        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)false_buf,strlen(false_buf));
+        TUYA_BLE_LOG_ERROR("WRITE AUTH HID busy."); 
     }
     else
     {
-        tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_WRITE_HID,(uint8_t *)false_buf,strlen(false_buf));
-        TUYA_BLE_LOG_ERROR("WRITE AUTH HID failed."); 
-    }
-    
-    
-    
+        tuya_ble_storage_write_hid_flag = 1;
+        tuya_ble_storage_write_hid_async(hid,H_ID_LEN,tuya_ble_storage_write_hid_async_completed); 
+    }        
 }
 
 
@@ -550,7 +582,7 @@ static void tuya_ble_auc_query_fingerprint(uint8_t *para, uint16_t len)
         return;
     } 
         
-    length = sprintf((char *)alloc_buf,"{\"ret\":true,\"firmName\":\"%s\",\"firmVer\":\"%s\"}",APP_BUILD_FIRMNAME,TY_APP_VER_STR);
+    length = sprintf((char *)alloc_buf,"{\"ret\":true,\"firmName\":\"%s\",\"firmVer\":\"%s\"}",TUYA_BLE_APP_BUILD_FIRMNAME_STRING,TUYA_BLE_APP_VERSION_STRING);
     
     tuya_ble_uart_prod_send(TUYA_BLE_AUC_CMD_QUERY_FINGERPRINT,alloc_buf,length);
     
@@ -622,7 +654,7 @@ __TUYA_BLE_WEAK void tuya_ble_custom_app_production_test_process(uint8_t channel
     
 }
 
-
+extern void tuya_ble_connect_monitor_timer_stop(void);
 void tuya_ble_app_production_test_process(uint8_t channel,uint8_t *p_in_data,uint16_t in_len)
 {
     uint8_t cmd = p_in_data[3];
@@ -640,7 +672,18 @@ void tuya_ble_app_production_test_process(uint8_t channel,uint8_t *p_in_data,uin
         TUYA_BLE_LOG_ERROR("The authorization instructions are not supported in non-serial channels!");
         return;
     }
-    
+    if((channel==1)&&(cmd==TUYA_BLE_AUC_CMD_EXTEND))
+    {
+        if(tuya_ble_production_test_with_ble_flag==0)
+        {
+            tuya_ble_production_test_with_ble_flag = 1;
+            if(tuya_ble_connect_status_get()!=BONDING_CONN)
+            {
+                tuya_ble_connect_monitor_timer_stop();
+            }
+        }
+        
+    }
     switch(cmd)
     {
         case TUYA_BLE_AUC_CMD_EXTEND:

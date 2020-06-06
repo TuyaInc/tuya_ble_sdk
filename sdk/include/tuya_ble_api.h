@@ -91,8 +91,7 @@ tuya_ble_status_t tuya_ble_device_update_mcu_version(uint32_t mcu_firmware_versi
  *.
  * */
 
-tuya_ble_status_t tuya_ble_sdk_init(tuya_ble_device_param_t * param_data);
-
+void tuya_ble_sdk_init_async(tuya_ble_device_param_t * param_data,tuya_ble_nv_async_callback_t callback);
 
 
 /**
@@ -139,6 +138,13 @@ void tuya_ble_connected_handler(void);
  * */
 void tuya_ble_disconnected_handler(void);
 
+/**
+ * @brief   Function for process the internal state of tuya sdk, application should  call this in disconnect handler.
+ * @param   [in]on_off: 0-off ,1 - on.
+ * @note    
+ *.
+ * */
+tuya_ble_status_t tuya_ble_adv_data_connecting_request_set(uint8_t on_off);
 
 /**
  * @brief   Function for data passthrough.
@@ -273,6 +279,29 @@ tuya_ble_status_t tuya_ble_event_response(tuya_ble_cb_evt_param_t *param);
  * 
  * */	
 tuya_ble_status_t tuya_ble_callback_queue_register(tuya_ble_callback_t cb);
+
+/**
+ * @brief   Function for get scheduler queue size.
+ *
+ * @note    If it returns 0, it means that the queue has not been initialized.
+ *
+ * */
+uint16_t tuya_ble_scheduler_queue_size_get(void);
+/**
+ * @brief   Function for get queue free space.
+ *
+ * @note    
+ *
+ * */
+uint16_t tuya_ble_scheduler_queue_space_get(void);
+/**
+ * @brief   Function for get the number of current events in the queue.
+ *
+ * @note    
+ *
+ * */
+uint16_t tuya_ble_scheduler_queue_events_get(void);
+
 
 #endif
 

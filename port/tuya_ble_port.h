@@ -44,61 +44,14 @@
 
 #endif
 
-/*
- *@brief   ble port api 
- *@param    
- *        
- *@note 
- for example the data format of the tuya_ble_gap_advertising_adv_data_update() function:
- 
-static const uint8_t adv_data[] =
-{
-    0x02,             // length 
-    GAP_ADTYPE_FLAGS, // type="Flags" 
-    GAP_ADTYPE_FLAGS_GENERAL | GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED,
-    
-    0x0B,             // length 
-    GAP_ADTYPE_LOCAL_NAME_COMPLETE,// Local name 
-    'I', 'P', 'C', '_', 'C', 'A', 'M', 'E', 'R', 'A',
-    0x03,
-    GAP_ADTYPE_16BIT_MORE,
-    0x00, 0xA3,
-}; 
-
-static const uint8_t scan_rsp_data[] =
-{    
-    0x0E,                             // length 
-    GAP_ADTYPE_MANUFACTURER_SPECIFIC, // Manufacturer Specific Data 
-    HI_WORD(COMPANY_ID),
-    LO_WORD(COMPANY_ID),
-    0x00,0x02,
-    LO_WORD(DEVICE_TYPE),
-    'I', 'P', 'C','C', 'A', 'M', 'E', 'R',
-    
-}; 
-
-tuya_ble_gap_advertising_adv_data_update(adv_data,sizeof(adv_data));
-
-tuya_ble_gap_advertising_scan_rsp_data_update(scan_rsp_data,sizeof(scan_rsp_data));
- *           
- * */
- 
-//tuya_ble_status_t tuya_ble_gap_adv_start(void);
 
 tuya_ble_status_t tuya_ble_gap_advertising_adv_data_update(uint8_t const * p_ad_data, uint8_t ad_len);
 
 tuya_ble_status_t tuya_ble_gap_advertising_scan_rsp_data_update(uint8_t const *p_sr_data, uint8_t sr_len);
 
-//tuya_ble_status_t tuya_ble_gap_adv_stop(void);
-
-//tuya_ble_status_t tuya_ble_gap_update_conn_params(tuya_ble_gap_conn_param_t conn_params);
-
 tuya_ble_status_t tuya_ble_gap_disconnect(void);
 
-//tuya_ble_status_t tuya_ble_gap_address_get(tuya_ble_addr_t mac);
-
 tuya_ble_status_t tuya_ble_gatt_send_data(const uint8_t *p_data,uint16_t len);
-
 
 
 /**
@@ -285,9 +238,7 @@ tuya_ble_status_t tuya_ble_nv_erase(uint32_t addr,uint32_t size);
  *
  * @return result
  */
-tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t * p_data, uint32_t size);
-
-
+tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t * p_src, uint32_t size);
 
 /**
  * @brief Read data from flash.
@@ -299,8 +250,58 @@ tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t * p_data, uint32
  *
  * @return result
  */
-tuya_ble_status_t tuya_ble_nv_read(uint32_t addr,uint8_t * p_data, uint32_t size);
+tuya_ble_status_t tuya_ble_nv_read(uint32_t addr,uint8_t * p_dest, uint32_t size);
 
+
+/**@brief   tuya_ble_storage event handler function for ble storage operations.
+ *
+ * This function will be called after a flash operation has completed.
+ */
+typedef void (*tuya_ble_nv_async_callback_t)(void * p_context,tuya_ble_status_t result);
+
+/**
+ * @brief Erase data on flash asynchronous.
+ * @note This operation is irreversible.
+ * @note This operation's units is different which on many chips.
+ * Callback funtion will be called after a flash erase operation has completed.
+ * @param addr flash address
+ * @param size erase bytes size
+ * @param p_param user-defined parameter passed to the event handler.
+ * @param callback callback function.
+ *
+ * @return 
+ */
+void tuya_ble_nv_erase_async(uint32_t addr,uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback);
+
+/**
+ * @brief Write data to flash asynchronous.
+ * 
+ * @note This operation must after erase. @see tuya_ble_nv_erase_async.
+ * Callback funtion will be called after a flash write operation has completed.
+ * @param addr flash address
+ * @param p_src the write data buffer
+ * @param size write bytes size
+ * @param p_param user-defined parameter passed to the event handler.
+ * @param callback callback function. 
+ *
+ * @return 
+ */
+void tuya_ble_nv_write_async(uint32_t addr,const uint8_t * p_src, uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback);
+
+/**
+ * @brief Read data from flash asynchronous.
+ * 
+ * @note 
+ * Callback funtion will be called after a flash read operation has completed.
+ * @param addr flash address
+ * @param p_dest the read data buffer
+ * @param size read bytes size
+ * @param p_param user-defined parameter passed to the event handler.
+ * @param callback callback function. 
+ *
+ * @return
+ */
+void tuya_ble_nv_read_async(uint32_t addr, uint8_t * p_dest, uint32_t size,void *p_context,tuya_ble_nv_async_callback_t callback);
 
 /**
  * @brief Initialize uart peripheral.
@@ -325,8 +326,6 @@ tuya_ble_status_t tuya_ble_common_uart_init(void);
 tuya_ble_status_t tuya_ble_common_uart_send_data(const uint8_t *p_data,uint16_t len);
 
 
-
-//#if TUYA_BLE_USE_OS
 /**
  * 
  *
@@ -519,8 +518,6 @@ bool tuya_ble_os_msg_queue_recv(void *p_handle, void *p_msg, uint32_t wait_ms);
  * */
 bool tuya_ble_event_queue_send_port(tuya_ble_evt_param_t *evt, uint32_t wait_ms);
 
-//#endif
-
 
 /**
     * @brief  128 bit AES ECB encryption on speicified plaintext and keys
@@ -618,9 +615,9 @@ bool tuya_ble_hmac_sha1_crypt(const uint8_t *key, uint32_t key_len, const uint8_
     */
 bool tuya_ble_hmac_sha256_crypt(const uint8_t *key, uint32_t key_len, const uint8_t *input, uint32_t input_len, uint8_t *output);
 
-#endif
 
-#if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==1)
+
+
 
 /**
  * \brief    Allocate a memory block with required size.
@@ -647,6 +644,4 @@ void tuya_ble_port_free( void *pv );
 
 
 #endif
-
-
 

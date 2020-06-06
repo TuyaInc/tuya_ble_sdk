@@ -105,8 +105,6 @@ extern "C" {
 #define FRM_GET_UNIX_TIME_CHAR_DATE_RESP   0x8012  //APP->BLE
 
 
-//#define FRM_CMD_APP_TO_BLE_MAX   FRM_FACTORY_TEST
-
 typedef enum 
 {
 	TUYA_BLE_OTA_STATUS_NONE,
@@ -121,18 +119,18 @@ typedef enum
 
 typedef struct{
     uint32_t send_len;
-    uint8_t  *send_data;//[TUYA_BLE_AIR_FRAME_MAX];
+    uint8_t  *send_data;
     uint32_t encrypt_data_buf_len;
-    uint8_t  *encrypt_data_buf;//[TUYA_BLE_AIR_FRAME_MAX];
+    uint8_t  *encrypt_data_buf;
 }tuya_ble_r_air_send_packet;
 
 
 typedef struct{
     uint32_t recv_len;
     uint32_t recv_len_max;
-    uint8_t  *recv_data;//[TUYA_BLE_AIR_FRAME_MAX];
+    uint8_t  *recv_data;
     uint32_t decrypt_buf_len;
-    uint8_t  *de_encrypt_buf;//[TUYA_BLE_AIR_FRAME_MAX];
+    uint8_t  *de_encrypt_buf;
 }tuya_ble_r_air_recv_packet;
 
 void tuya_ble_air_recv_packet_free(void);

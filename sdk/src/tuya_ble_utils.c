@@ -172,9 +172,9 @@ void tuya_ble_str_to_hex(uint8_t *str_buf,uint8_t str_len,uint8_t *hex_buf)
     }
 }
 
-void tuya_ble_swap(s16 *a, s16 *b)
+void tuya_ble_swap(int16_t *a, int16_t *b)
 {
-    s16    temp;
+    int16_t    temp;
     temp = *a;
     *a = *b;
     *b = temp;
@@ -291,7 +291,7 @@ uint16_t tuya_ble_crc16_compute(uint8_t * p_data, uint16_t size, uint16_t * p_cr
 
     uint16_t poly[2] = {0, 0xa001};            //0x8005 <==> 0xa001
     uint16_t crc = 0xffff;
-//    unsigned char ds;
+
     int i, j;
 
     for(j = size; j > 0; j--) {
