@@ -141,7 +141,7 @@ uint16_t tuya_ble_scheduler_queue_events_get(void)
 
 #endif
 
-/*
+/**
  *@brief
  *@param
  *
@@ -173,7 +173,7 @@ tuya_ble_status_t tuya_ble_gatt_receive_data(uint8_t *p_data,uint16_t len)
 }
 
 
-/*
+/**
  *@brief Function for receive uart data.
  *@param
  *
@@ -387,7 +387,7 @@ tuya_ble_status_t tuya_ble_common_uart_send_full_instruction_received(uint8_t *p
 
 
 
-/*
+/**
  *@brief
  *@param
  *
@@ -431,7 +431,7 @@ tuya_ble_status_t tuya_ble_device_update_product_id(tuya_ble_product_id_type_t t
 }
 
 
-/*
+/**
  *@brief
  *@param
  *
@@ -461,7 +461,7 @@ tuya_ble_status_t tuya_ble_device_update_login_key(uint8_t* p_buf, uint8_t len)
     return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief
  *@param
  *
@@ -474,7 +474,7 @@ tuya_ble_status_t tuya_ble_device_update_mcu_version(uint32_t mcu_firmware_versi
     return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief
  *@param
  *
@@ -505,7 +505,7 @@ tuya_ble_status_t tuya_ble_device_update_bound_state(uint8_t state)
 }
 
 
-/*
+/**
  *@brief
  *@param
  *
@@ -559,7 +559,7 @@ tuya_ble_status_t tuya_ble_dp_data_report(uint8_t *p_data,uint32_t len)
     return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief
  *@param
  *
@@ -614,7 +614,7 @@ tuya_ble_status_t tuya_ble_dp_data_with_time_report(uint32_t timestamp,uint8_t *
 }
 
 
-/*
+/**
  *@brief
  *@param
  *
@@ -725,7 +725,7 @@ tuya_ble_status_t tuya_ble_production_test_asynchronous_response(uint8_t channel
 {
     tuya_ble_evt_param_t evt;
     uint8_t *ble_evt_buffer;
-
+    
     if(tuya_ble_connect_status_get()!=BONDING_CONN)
     {
         return TUYA_BLE_ERR_INVALID_STATE;
@@ -875,7 +875,7 @@ tuya_ble_status_t tuya_ble_device_reset_response(uint8_t result_code)
 
 #endif
 
-/*
+/**
  *@brief
  *@param
  *
@@ -899,7 +899,7 @@ tuya_ble_status_t tuya_ble_device_factory_reset(void)
 }
 
 
-/*
+/**
  *@brief
  *@param time_type: 0-13-byte millisecond string ,1 - normal time format
  *
@@ -928,7 +928,7 @@ tuya_ble_status_t tuya_ble_time_req(uint8_t time_type)
     return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief
  *@param
  *
@@ -1019,7 +1019,7 @@ void tuya_ble_connect_monitor_timer_stop(void)
 
 }
 
-/*
+/**
  *@brief
  *@param [in]on_off: 0-off ,1 - on.
  *
@@ -1055,7 +1055,7 @@ tuya_ble_status_t tuya_ble_adv_data_connecting_request_set(uint8_t on_off)
 
 extern tuya_ble_parameters_settings_t tuya_ble_current_para;
 
-/*
+/**
  *@brief
  *@param
  *
@@ -1075,7 +1075,7 @@ void tuya_ble_connected_handler(void)
     }
 }
 
-/*
+/**
  *@brief
  *@param
  *
@@ -1096,13 +1096,15 @@ void tuya_ble_disconnected_handler(void)
 }
 
 
-/*
+/**
  *@brief Function for initialize the tuya sdk.
  *@param
  *
  *@note
- * Initialization exampleï¼š
+ * Initialization exampleï¼
+ *@example
 
+ *@code
 static void tuya_ble_sdk_init_async_completed(void *p_param,tuya_ble_status_t result)
 {
     if(result==TUYA_BLE_SUCCESS)
@@ -1137,7 +1139,8 @@ void tuya_ble_app_init(void)
     
         
 }
-
+ *@endcode
+ 
  * */
 
 static tuya_ble_nv_async_callback_t tuya_ble_sdk_init_async_callback = NULL;

@@ -286,7 +286,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
         return;
     }
 
-    if(ty_trsmitr_proc.version<2)  //协议主版本号低于2，不解析，返回。
+    if(ty_trsmitr_proc.version<2)  
     {
         TUYA_BLE_LOG_ERROR("ty_ble_rx_proc version not compatibility!");
         tuya_ble_air_recv_packet_free();
@@ -294,7 +294,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     }
 
 
-    if(tuya_ble_current_para.sys_settings.bound_flag==1)//当前已绑定状态
+    if(tuya_ble_current_para.sys_settings.bound_flag==1)
     {
         if(ENCRYPTION_MODE_NONE==air_recv_packet.recv_data[0])
         {
@@ -327,15 +327,15 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     }
 
 
-    if(temp != 0) //解密失败
+    if(temp != 0) 
     {
         TUYA_BLE_LOG_ERROR("ble receive data decryption error code = %d",temp);
         tuya_ble_free(air_recv_packet.de_encrypt_buf);
         return;
     }
 
-    TUYA_BLE_LOG_HEXDUMP_DEBUG("decryped data",(uint8_t*)air_recv_packet.de_encrypt_buf,air_recv_packet.decrypt_buf_len);//解密数据
-    //指令数据crc验证
+    TUYA_BLE_LOG_HEXDUMP_DEBUG("decryped data",(uint8_t*)air_recv_packet.de_encrypt_buf,air_recv_packet.decrypt_buf_len);
+
     if(ble_cmd_data_crc_check((uint8_t *)air_recv_packet.de_encrypt_buf,air_recv_packet.decrypt_buf_len)!=0)
     {
         TUYA_BLE_LOG_ERROR("ble receive data crc check error!");
@@ -343,7 +343,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
         return;
     }
 
-    //SN验证
+    //SN
     current_sn  = air_recv_packet.de_encrypt_buf[0]<<24;
     current_sn += air_recv_packet.de_encrypt_buf[1]<<16;
     current_sn += air_recv_packet.de_encrypt_buf[2]<<8;
@@ -352,7 +352,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     if(current_sn<=tuya_ble_receive_sn)
     {
         TUYA_BLE_LOG_ERROR("ble receive SN error!");
-        tuya_ble_gap_disconnect();//SN错误，断开蓝牙连接
+        tuya_ble_gap_disconnect();
         tuya_ble_free(air_recv_packet.de_encrypt_buf);
         return;
     }
@@ -366,7 +366,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
 
     if((BONDING_CONN != tuya_ble_connect_status_get())&&(FRM_QRY_DEV_INFO_REQ != current_cmd)&&(PAIR_REQ != current_cmd)
             &&(FRM_LOGIN_KEY_REQ != current_cmd)&&(FRM_FACTORY_TEST_CMD != current_cmd)&&(FRM_NET_CONFIG_INFO_REQ != current_cmd)&&(FRM_ANOMALY_UNBONDING_REQ != current_cmd))
-    {   //没有绑定前，不响应其它命令
+    {   
         tuya_ble_free(air_recv_packet.de_encrypt_buf);
         TUYA_BLE_LOG_ERROR("ble receive cmd error on current bond state!");
         return;
@@ -374,7 +374,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
 
 
     if(tuya_ble_ota_status_get()!=TUYA_BLE_OTA_STATUS_NONE)
-    {   //OTA状态下，不处理其它事件
+    {   
         if(!((current_cmd>=FRM_OTA_START_REQ)&&(current_cmd<=FRM_OTA_END_REQ)))
         {
             tuya_ble_free(air_recv_packet.de_encrypt_buf);
@@ -394,7 +394,7 @@ void tuya_ble_commonData_rx_proc(uint8_t *buf,uint16_t len)
     {
         memset(ble_evt_buffer,0,air_recv_packet.decrypt_buf_len+1);
     }
-    ble_evt_buffer[0] = current_encry_mode;     //首字节拷贝加密方式，便于后续使用
+    ble_evt_buffer[0] = current_encry_mode;     
     memcpy(ble_evt_buffer+1,(uint8_t *)air_recv_packet.de_encrypt_buf,air_recv_packet.decrypt_buf_len);
     evt.hdr.event = TUYA_BLE_EVT_BLE_CMD;
     evt.ble_cmd_data.cmd = current_cmd;
@@ -1622,7 +1622,7 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
         return 1;
     }
 
-    //生成随机IV
+    //IV
     if(encryption_mode != ENCRYPTION_MODE_NONE)
     {
         for(i=0; i<16; i+=2)
@@ -1656,7 +1656,7 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
     {
         TUYA_BLE_LOG_ERROR("The length of the send to ble exceeds the maximum length.");
         air_send_packet.send_len = 0;
-        return 1; //加密后数据加上加密头超过AIR_FRAME_MAX
+        return 1; 
     }
 
     air_send_packet.send_data = NULL;
@@ -1676,7 +1676,7 @@ uint8_t tuya_ble_commData_send(uint16_t cmd,uint32_t ack_sn,uint8_t *data,uint16
 
 
     uint32_t send_sn = get_ble_send_sn();
-    //利用send_data buffer缓存明文指令数据
+  
     air_send_packet.send_data[0] = send_sn>>24;
     air_send_packet.send_data[1] = send_sn>>16;
     air_send_packet.send_data[2] = send_sn>>8;

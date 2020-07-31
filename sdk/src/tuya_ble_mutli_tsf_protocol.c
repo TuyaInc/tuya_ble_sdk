@@ -1,7 +1,7 @@
 /**
  * \file tuya_ble_mutli_tsf_protocol.c
  *
- * \brief 
+ * \brief
  */
 /*
  *  Copyright (C) 2014-2019, Tuya Inc., All Rights Reserved
@@ -19,9 +19,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  This file is part of tuya ble sdk 
+ *  This file is part of tuya ble sdk
  */
- 
+
 #include "tuya_ble_stdlib.h"
 #include "tuya_ble_type.h"
 #include "tuya_ble_mem.h"
@@ -121,7 +121,7 @@ frame_total_t get_trsmitr_frame_total_len(frm_trsmitr_proc_s *frm_trsmitr)
 *  description:
 *  Input: transmitter handle
 *  Output:
-*  Return: 
+*  Return:
 ***********************************************************/
 uint8_t get_trsmitr_frame_version(frm_trsmitr_proc_s *frm_trsmitr)
 {
@@ -164,7 +164,7 @@ uint8_t *get_trsmitr_subpkg(frm_trsmitr_proc_s *frm_trsmitr)
     return frm_trsmitr->subpkg;
 }
 
-static frame_seq_t get_frame_seq(void) //由于暂时没有使用该类型数据，所以暂时可用于多线程
+static frame_seq_t get_frame_seq(void) //Because this type of data is not used temporarily, it can be used for multi-threaded calls temporarily
 {
     return (frame_seq >= FRAME_SEQ_LMT) ? 0 : frame_seq++;
 }
@@ -379,7 +379,7 @@ mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_da
     {
         return MTP_TRSMITR_CONTINUE;
     }
-    frm_trsmitr->pkg_desc = FRM_PKG_END;
+
     return MTP_OK;
 }
 /***********************************************************
@@ -421,7 +421,7 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
                           void *data,uint8_t len)
 {
     klv_node_s *node;
-    
+
     if(NULL == data || type >= DT_LMT) {
         return NULL;
     }
@@ -436,7 +436,7 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
         goto err_ret;
     }
 
-    
+
     node = (klv_node_s *)tuya_ble_malloc(sizeof(klv_node_s));
 
     if(NULL == node)
@@ -444,12 +444,15 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
         goto err_ret;
     }
     memset(node, 0, sizeof(klv_node_s));
-    node->data =tuya_ble_malloc(len);
-    if ((NULL == node)||(node->data==NULL))
+    if(len>0)
     {
-        tuya_ble_free(node->data);
-        tuya_ble_free((uint8_t*)node);
-        goto err_ret;
+        node->data =tuya_ble_malloc(len);
+        if (node->data==NULL)
+        {
+            tuya_ble_free(node->data);
+            tuya_ble_free((uint8_t*)node);
+            goto err_ret;
+        }
     }
     node->id = id;
     node->len = len;
@@ -459,15 +462,16 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
             DT_BITMAP == type)
     {   // change to big-end
         uint32_t tmp = *(uint32_t *)data;
-       // unsigned char shift = 0;
+        // unsigned char shift = 0;
         node->data[0] = (tmp >> 24) & 0xff;
         node->data[1] = (tmp >> 16) & 0xff;
         node->data[2] = (tmp >> 8) & 0xff;
         node->data[3] = (tmp >> 0) & 0xff;
-    } 
+    }
     else
-    {    
-        memcpy((void *)node->data,(uint8_t*)data,len);
+    {
+        if(len>0)
+            memcpy((void *)node->data,(uint8_t*)data,len);
     }
     node->next = list;
     return node;
@@ -480,7 +484,7 @@ err_ret:
 /***********************************************************
 *  Function: klvlist_2_data
 *  description:
-*  Input: type:0-data中len占1个字节，1-data中len占两个字节
+*  Input: type:0- 1 byte length，1- 2 byte length
 *  Output:
 *  Return:
 ***********************************************************/
@@ -516,14 +520,17 @@ mtp_ret klvlist_2_data(klv_node_s *list,uint8_t **data,uint32_t *len,uint8_t typ
         mk_data[offset++] = node->type;
         if(1 == type)
         {
-            mk_data[offset++] = 0;
+            mk_data[offset++] = node->len>>8;
             mk_data[offset++] = node->len;
         }
         else
         {
             mk_data[offset++] = node->len;
         }
-        memcpy(&mk_data[offset],node->data,node->len);
+        if(node->len>0)
+        {
+            memcpy(&mk_data[offset],node->data,node->len);
+        }
         offset += node->len;
         node = node->next;
     }
@@ -536,12 +543,14 @@ mtp_ret klvlist_2_data(klv_node_s *list,uint8_t **data,uint32_t *len,uint8_t typ
 /***********************************************************
 *  Function: data_2_klvlist
 *  description:
-*  Input:   type:0-data中len占1个字节，1-data中len占两个字节
+*  Input:   type: 0- 1 byte length，1- 2 byte length
 *  Output:
 *  Return:
 ***********************************************************/
 mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type)
-{   //数据拆分成dp点列表  dpid+dp_tp+len+data
+{
+    uint16_t dp_len = 0;
+    //The data is parsed into a list of dp points  dpid+dp_tp+len+data
     if(NULL == data || NULL == list)
     {
         return MTP_INVALID_PARAM;
@@ -579,22 +588,24 @@ mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type
         memset(node,0,sizeof(sizeof(klv_node_s)));
         if(1 == type)
         {
-            node->data=tuya_ble_malloc(data[3+offset]);  //这里虽然len用两个字节表示，但是只用了低字节
+            dp_len = (data[2+offset]<<8) + data[3+offset];
         }
         else
         {
-            node->data=tuya_ble_malloc(data[2+offset]);
+            dp_len = data[2+offset];
         }
 
-        if(NULL == node||node->data==NULL)
+        if(dp_len>0)
         {
-            tuya_ble_free(node->data);
-            tuya_ble_free((uint8_t*)node);
-            free_klv_list(klv_list);
-            return MTP_MALLOC_ERR;
+            node->data=tuya_ble_malloc(dp_len);
+            if(node->data==NULL)
+            {
+                tuya_ble_free(node->data);
+                tuya_ble_free((uint8_t*)node);
+                free_klv_list(klv_list);
+                return MTP_MALLOC_ERR;
+            }
         }
-
-
         node->id = data[offset++];
         node->type = data[offset++];
         if(1 == type)
@@ -614,8 +625,9 @@ mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type
             free_klv_list(klv_list);
             return MTP_COM_ERROR;
         }
-
-        memcpy(node->data,&data[offset],node->len);
+        if(node->len>0)
+            memcpy(node->data,&data[offset],node->len);
+        
         offset += node->len;
 
         node->next = klv_list;

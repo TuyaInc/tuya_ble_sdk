@@ -3,6 +3,22 @@
 
 
 
+## [1.2.6] - 2020-07-13
+
+### Added
+
+- Added support for transmitting character dp point data with length 0.
+
+### Changed
+
+- Changed  the definition of the critical section interface function of the port layer.
+
+### Fixed
+
+- Fixed the bug that the single packet data instruction cannot be parsed (Although there is no such instruction currently).
+
+
+
 ## [1.2.5] - 2020-06-03
 
 ### Changed

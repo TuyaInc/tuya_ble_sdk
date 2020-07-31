@@ -34,13 +34,51 @@
 
    
 #if defined(TUYA_BLE_PORT_PLATFORM_HEADER_FILE)
+/**
+ * @file TUYA_BLE_PORT_PLATFORM_HEADER_FILE
+ *
+ * @brief Platform header file
 
-#include TUYA_BLE_PORT_PLATFORM_HEADER_FILE
+ * @note 
+ *  Must declare or define 'tuya_ble_device_enter_critical' and 'tuya_ble_device_exit_critical' in the platform header file. 
+
+ *  An example on the nrf52832 platform is as follows
+ 
+ * @example
+ 
+ * @code
+    #define TUYA_BLE_PORT_PLATFORM_HEADER_FILE  "tuya_ble_port_nrf52832.h" ///<in custom_tuya_ble_config.h file.
+ * @endcode   
+    
+ *  Defined in the tuya_ble_port_nrf52832.h file as follows 
+ *   
+ * @code
+      #define tuya_ble_device_enter_critical() \
+      {                                    \
+          uint8_t __CR_NESTED = 0;         \
+          app_util_critical_region_enter(&__CR_NESTED);
+  
+      #define tuya_ble_device_exit_critical()  \
+          app_util_critical_region_exit(__CR_NESTED); \
+      }
+      
+ * @endcode     
+*/
+#include TUYA_BLE_PORT_PLATFORM_HEADER_FILE   
 
 #else
 
-#define TUYA_BLE_LOG(...)
+#define TUYA_BLE_PRINTF(...)
 #define TUYA_BLE_HEXDUMP(...)
+
+/**@brief Macro for entering and leaving a critical region.
+ *
+ * @note Due to implementation details, there must exist one and only one call to
+ *       tuya_ble_device_exit_critical() for each call to tuya_ble_device_enter_critical(), and they must be located
+ *       in the same scope.
+ */
+#define tuya_ble_device_enter_critical() 
+#define tuya_ble_device_exit_critical()  
 
 #endif
 
@@ -151,24 +189,6 @@ tuya_ble_status_t tuya_ble_gap_addr_get(tuya_ble_gap_addr_t *p_addr);
  *.
  * */
 tuya_ble_status_t tuya_ble_gap_addr_set(tuya_ble_gap_addr_t *p_addr);
-
-
-/**@brief Function for entering a critical region.
- *
- * @note Due to implementation details, there must exist one and only one call to
- *       tuya_ble_device_exit_critical() for each call to tuya_ble_device_enter_critical(), and they must be located
- *       in the same scope.
- */
-void tuya_ble_device_enter_critical(void);
-
-/**@brief Macro for leaving a critical region.
- *
- * @note Due to implementation details, there must exist one and only one call to
- *       tuya_ble_device_exit_critical() for each call to tuya_ble_device_enter_critical(), and they must be located
- *       in the same scope.
- */
-
-void tuya_ble_device_exit_critical(void);
 
 /**
  * @brief   Get ture random bytes .

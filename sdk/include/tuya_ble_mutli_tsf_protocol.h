@@ -79,19 +79,18 @@ typedef int32_t mtp_ret;
 
 // frame transmitter process
 typedef struct {
-    frame_total_t  total;         //4字节，数据总长度，不包括包头
-   // frame_type_t   type;        //1字节
-    uint8_t  version;       //1字节,协议主版本号
-    frame_seq_t    seq;           //1字节，
-    frm_pkg_desc_t pkg_desc;      //1字节 当前分包帧类型（init/first/middle/end）
-    frame_subpkg_num_t subpkg_num;//4字节，当前分包编号
-    uint32_t pkg_trsmitr_cnt; //  package process count  已发送出去的字节数
-    frame_subpkg_len_t subpkg_len;//1字节，当前分包中的数据长度（）
+    frame_total_t  total;         //4 bytes, total length of data, not including header
+    uint8_t  version;             //1 byte, protocol major version number
+    frame_seq_t    seq;           //1 byte
+    frm_pkg_desc_t pkg_desc;      //1 byte, Current packet frame type (init/first/middle/end)
+    frame_subpkg_num_t subpkg_num;//4 bytes, current sub-packet number
+    uint32_t pkg_trsmitr_cnt;     //  package process count ,Number of bytes sent 
+    frame_subpkg_len_t subpkg_len;//1 byte, the data length in the current sub-packet
     uint8_t subpkg[SNGL_PKG_TRSFR_LMT];
 } frm_trsmitr_proc_s;
 
 
-// dp type describe
+// dp type description,please refer to the relevant help documents of Tuya iot platform for the usage of various types of dp points.
 typedef uint8_t dp_type;
 #define DT_RAW     0
 #define DT_BOOL    1
@@ -100,10 +99,10 @@ typedef uint8_t dp_type;
 #define DT_STRING  3
 #define DT_ENUM    4
 #define DT_BITMAP  5
-#define DT_CHAR    7       // char类型（1字节）
-#define DT_UCHAR   8       // unsigned char类型（1字节）
-#define DT_SHORT   9       // char类型（2字节）
-#define DT_USHORT  10      // char类型(2字节)
+#define DT_CHAR    7       //Not currently supported 
+#define DT_UCHAR   8       //Not currently supported 
+#define DT_SHORT   9       //Not currently supported 
+#define DT_USHORT  10      //Not currently supported 
 #define DT_LMT    DT_USHORT
 
 #define DT_VALUE_LEN 4 // int

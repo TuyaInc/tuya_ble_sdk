@@ -25,7 +25,7 @@
 #include "tuya_ble_port.h"
 #include "tuya_ble_type.h"
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -36,7 +36,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_advertising_adv_data_update(uint8
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -48,7 +48,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_advertising_scan_rsp_data_update(
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -60,7 +60,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_disconnect(void)
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -73,7 +73,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gatt_send_data(const uint8_t *p_data,
 }
 
  
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -84,7 +84,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_create(void** p_timer_id,uint32
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -95,7 +95,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_delete(void* timer_id)
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -107,7 +107,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_start(void* timer_id)
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -119,7 +119,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_restart(void* timer_id,uint32_t
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -132,7 +132,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_timer_stop(void* timer_id)
 }
 
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -144,7 +144,7 @@ __TUYA_BLE_WEAK void tuya_ble_device_delay_ms(uint32_t ms)
     
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -157,7 +157,7 @@ __TUYA_BLE_WEAK void tuya_ble_device_delay_us(uint32_t us)
 }
 
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -169,7 +169,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_rand_generator(uint8_t* p_buf, uint8_
 	return TUYA_BLE_SUCCESS;
 }
  
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -181,7 +181,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_device_reset(void)
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -193,7 +193,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_addr_get(tuya_ble_gap_addr_t *p_a
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -205,30 +205,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_gap_addr_set(tuya_ble_gap_addr_t *p_a
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
- *@brief    
- *@param    
- *        
- *@note     
- *           
- * */
-__TUYA_BLE_WEAK void tuya_ble_device_enter_critical(void)
-{
-	
-}
-/*
- *@brief    
- *@param    
- *        
- *@note     
- *           
- * */
-__TUYA_BLE_WEAK void tuya_ble_device_exit_critical(void)
-{
-	
-}
- 
- /*
+ /**
  *@brief    
  *@param    
  *        
@@ -239,7 +216,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_rtc_get_timestamp(uint32_t *timestamp
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -252,7 +229,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_rtc_set_timestamp(uint32_t timestamp,
 }
 
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -263,7 +240,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_init(void)
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -274,7 +251,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_erase(uint32_t addr,uint32_t size)
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -285,7 +262,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_write(uint32_t addr,const uint8_t 
 {
 	return TUYA_BLE_SUCCESS;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -297,7 +274,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_nv_read(uint32_t addr,uint8_t *p_dest
 	return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -308,7 +285,7 @@ __TUYA_BLE_WEAK void tuya_ble_nv_erase_async(uint32_t addr,uint32_t size,void *p
 {
 	
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -320,7 +297,7 @@ __TUYA_BLE_WEAK void tuya_ble_nv_write_async(uint32_t addr,const uint8_t * p_src
 	
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -332,7 +309,7 @@ __TUYA_BLE_WEAK void tuya_ble_nv_read_async(uint32_t addr,uint8_t * p_dest, uint
 
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -344,7 +321,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_common_uart_init(void)
     return TUYA_BLE_SUCCESS;
 }
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -357,7 +334,7 @@ __TUYA_BLE_WEAK tuya_ble_status_t tuya_ble_common_uart_send_data(const uint8_t *
 }
 
 
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -368,7 +345,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_task_create(void **pp_handle, const char *p_nam
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -379,7 +356,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_task_delete(void *p_handle)
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -390,7 +367,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_task_suspend(void *p_handle)
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -401,7 +378,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_task_resume(void *p_handle)
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -412,7 +389,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_msg_queue_create(void **pp_handle, uint32_t msg
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -423,7 +400,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_msg_queue_delete(void *p_handle)
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -434,7 +411,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_msg_queue_peek(void *p_handle, uint32_t *p_msg_
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -445,7 +422,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_msg_queue_send(void *p_handle, void *p_msg, uin
 {
 	return true;
 }
-/*
+/**
  *@brief    
  *@param    
  *        
@@ -458,7 +435,7 @@ __TUYA_BLE_WEAK bool tuya_ble_os_msg_queue_recv(void *p_handle, void *p_msg, uin
 }
 
 
-/*
+/**
  *@brief    
  *@param    
  *        
