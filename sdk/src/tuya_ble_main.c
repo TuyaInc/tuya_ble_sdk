@@ -234,6 +234,12 @@ tuya_ble_status_t tuya_ble_inter_event_response(tuya_ble_cb_evt_param_t *param)
             tuya_ble_free(param->dp_write_data.p_data);
         }
         break;
+    case TUYA_BLE_CB_EVT_DP_DATA_RECEIVED:
+        if(param->dp_received_data.p_data)
+        {
+            tuya_ble_free(param->dp_received_data.p_data);
+        }
+        break; 
     case TUYA_BLE_CB_EVT_DP_QUERY:
         if(param->dp_query_data.p_data)
         {
@@ -306,11 +312,218 @@ uint8_t tuya_ble_cb_event_send(tuya_ble_cb_evt_param_t *evt)
 }
 
 
+#if (TUYA_BLE_PROTOCOL_VERSION_HIGN==4)
+
+/** @brief  GAP - Advertisement data (max size = 31 bytes, best kept short to conserve power) */
+
+#define TUYA_BLE_ADV_DATA_LEN_MAX  31
+
+static const uint8_t adv_data_const[TUYA_BLE_ADV_DATA_LEN_MAX] =
+{
+    0x02,
+    0x01,
+    0x06,
+    0x03,
+    0x02,
+    0x50, 0xFD,
+    0x17,
+    0x16,
+    0x50, 0xFD,
+    0x41, 0x00,       //Frame Control
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+
+#define TUYA_BLE_SCAN_RSP_DATA_LEN_MAX  31
+static const uint8_t scan_rsp_data_const[TUYA_BLE_SCAN_RSP_DATA_LEN_MAX] =
+{
+    0x03,
+    0x09,
+    0x54, 0x59,
+    0x17,             // length 
+    0xFF,
+    0xD0,
+    0x07,
+    0x00, //Encry Mode(8)
+    0x00,0x00, //communication way bit0-mesh bit1-wifi bit2-zigbee bit3-NB
+    0x00, //FLAG
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
+static uint8_t adv_data[TUYA_BLE_ADV_DATA_LEN_MAX];
+static uint8_t scan_rsp_data[TUYA_BLE_SCAN_RSP_DATA_LEN_MAX];
+
+uint8_t tuya_ble_get_adv_connect_request_bit_status(void)
+{
+    return (adv_data[11]&0x02);
+}
+
+void tuya_ble_adv_change(void)
+{
+    uint8_t *aes_buf = NULL;
+    uint8_t aes_key[16];
+    uint8_t encry_device_id[DEVICE_ID_LEN];
+
+    memcpy(adv_data,adv_data_const,TUYA_BLE_ADV_DATA_LEN_MAX);
+    memcpy(&scan_rsp_data,scan_rsp_data_const,TUYA_BLE_SCAN_RSP_DATA_LEN_MAX);
+
+    adv_data[7] = 7+tuya_ble_current_para.pid_len;
+    
+    adv_data[13] = tuya_ble_current_para.pid_type;
+    adv_data[14] = tuya_ble_current_para.pid_len;
+    
+    adv_data[11] &=(~0x04);
+            
+    adv_data[11] &=(~0x02);  //clear connect request bit
+
+    scan_rsp_data[8] = TUYA_BLE_SECURE_CONNECTION_TYPE;
+
+    scan_rsp_data[9] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
+    scan_rsp_data[10] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    
+    if(tuya_ble_current_para.pid_len==20)
+    {
+        scan_rsp_data[11] |=0x01 ;
+    }
+    else
+    {
+        scan_rsp_data[11] &=(~0x01);
+    }
+
+    if(tuya_ble_current_para.sys_settings.bound_flag == 1)
+    {
+        adv_data[11] |=0x08 ;
+        //
+        memcpy(aes_key,tuya_ble_current_para.sys_settings.login_key,LOGIN_KEY_LEN);
+        memcpy(aes_key+LOGIN_KEY_LEN,tuya_ble_current_para.auth_settings.device_id,16-LOGIN_KEY_LEN);
+
+        aes_buf = tuya_ble_malloc(200);
+
+        if(aes_buf==NULL)
+        {
+            TUYA_BLE_LOG_ERROR("Malloc failed for AES BUF in adv change.");
+            return;
+        }
+        else
+        {
+            memset(aes_buf,0,200);
+        }
+
+        tuya_ble_encrypt_old_with_key(aes_key,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,aes_buf);
+
+        memcpy(&adv_data[15],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
+
+        tuya_ble_free(aes_buf);
+
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
+
+    }
+    else
+    {
+        adv_data[11] &=(~0x08);
+
+        memcpy(&adv_data[15],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
+    }
+    TUYA_BLE_LOG_INFO("adv data changed ,current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+
+    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+15);
+    tuya_ble_gap_advertising_scan_rsp_data_update(scan_rsp_data,scan_rsp_data_const[0]+25);
+
+}
+
+void tuya_ble_adv_change_with_connecting_request(void)
+{
+    uint8_t *aes_buf = NULL;
+    uint8_t aes_key[16];
+    uint8_t encry_device_id[DEVICE_ID_LEN];
+
+    memcpy(adv_data,adv_data_const,TUYA_BLE_ADV_DATA_LEN_MAX);
+    memcpy(&scan_rsp_data,scan_rsp_data_const,TUYA_BLE_SCAN_RSP_DATA_LEN_MAX);
+
+    adv_data[7] = 7+tuya_ble_current_para.pid_len;
+    
+    adv_data[13] = tuya_ble_current_para.pid_type;
+    adv_data[14] = tuya_ble_current_para.pid_len;
+    
+
+    adv_data[11] &=(~0x04);
+    
+        
+    adv_data[11] |= 0x02;  //set connect request bit
+
+
+    scan_rsp_data[8] = TUYA_BLE_SECURE_CONNECTION_TYPE;
+
+    scan_rsp_data[9] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
+    scan_rsp_data[10] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    
+    if(tuya_ble_current_para.pid_len==20)
+    {
+        scan_rsp_data[11] |=0x01 ;
+    }
+    else
+    {
+        scan_rsp_data[11] &=(~0x01);
+    }
+
+    if(tuya_ble_current_para.sys_settings.bound_flag == 1)
+    {
+        adv_data[11] |=0x08 ;
+        //
+        memcpy(aes_key,tuya_ble_current_para.sys_settings.login_key,LOGIN_KEY_LEN);
+        memcpy(aes_key+LOGIN_KEY_LEN,tuya_ble_current_para.auth_settings.device_id,16-LOGIN_KEY_LEN);
+
+        aes_buf = tuya_ble_malloc(200);
+
+        if(aes_buf==NULL)
+        {
+            TUYA_BLE_LOG_ERROR("Malloc failed for AES BUF in adv change with connecting request.");
+            return;
+        }
+        else
+        {
+            memset(aes_buf,0,200);
+        }
+
+        tuya_ble_encrypt_old_with_key(aes_key,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,aes_buf);
+
+        memcpy(&adv_data[15],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
+
+        tuya_ble_free(aes_buf);
+
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
+
+    }
+    else
+    {
+        adv_data[11] &=(~0x08);
+
+        memcpy(&adv_data[15],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
+    }
+    TUYA_BLE_LOG_INFO("adv data changed ,current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+15);
+    tuya_ble_gap_advertising_scan_rsp_data_update(scan_rsp_data,scan_rsp_data_const[0]+25);
+    
+}
+
+#endif
+
+
 #if (TUYA_BLE_PROTOCOL_VERSION_HIGN==3)
 
 /** @brief  GAP - Advertisement data (max size = 31 bytes, best kept short to conserve power) */
 
-#define TUYA_BLE_ADV_DATA_LEN  (12+TUYA_BLE_PRODUCT_ID_MAX_LEN)
+#define TUYA_BLE_ADV_DATA_LEN  31
 
 static const uint8_t adv_data_const[TUYA_BLE_ADV_DATA_LEN] =
 {
@@ -319,28 +532,25 @@ static const uint8_t adv_data_const[TUYA_BLE_ADV_DATA_LEN] =
     0x06,
     0x03,
     0x02,
-    0x01, 0xA2,
-    0x14,
+    0x50, 0xFD,
+    0x17,
     0x16,
-    0x01, 0xA2,
-    0x00,         //id type 00-pid 01-product key
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    0x50, 0xFD,
+    0x31, 0x00,       //Frame Control
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-
-#define TUYA_BLE_SCAN_RSP_DATA_LEN  30
+#define TUYA_BLE_SCAN_RSP_DATA_LEN  28
 static const uint8_t scan_rsp_data_const[TUYA_BLE_SCAN_RSP_DATA_LEN] =
 {
     0x03,
     0x09,
     0x54, 0x59,
-    0x19,             // length 
+    0x17,             // length 
     0xFF,
     0xD0,
     0x07,
-    0x00, //bond flag bit7 （8）
-    0x03, //protocol version
-    0x01, //Encry Mode （10）
+    0x00, //Encry Mode （10）
     0x00,0x00, //communication way bit0-mesh bit1-wifi bit2-zigbee bit3-NB
     0x00, //data type
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
@@ -351,7 +561,7 @@ static uint8_t scan_rsp_data[TUYA_BLE_SCAN_RSP_DATA_LEN];
 
 uint8_t tuya_ble_get_adv_connect_request_bit_status(void)
 {
-    return (scan_rsp_data[8]&0x01);
+    return (adv_data[11]&0x02);
 }
 
 void tuya_ble_adv_change(void)
@@ -363,21 +573,33 @@ void tuya_ble_adv_change(void)
     memcpy(adv_data,adv_data_const,TUYA_BLE_ADV_DATA_LEN);
     memcpy(&scan_rsp_data,scan_rsp_data_const,TUYA_BLE_SCAN_RSP_DATA_LEN);
 
-    adv_data[7] = 4+tuya_ble_current_para.pid_len;
-    adv_data[11] = tuya_ble_current_para.pid_type;
+    adv_data[7] = 7+tuya_ble_current_para.pid_len;
     
-    scan_rsp_data[8] &=(~0x01);
+    adv_data[13] = tuya_ble_current_para.pid_type;
+    adv_data[14] = tuya_ble_current_para.pid_len;
+    
+    adv_data[11] &=(~0x04);
+           
+    adv_data[11] &=(~0x02);
 
-    scan_rsp_data[9] = TUYA_BLE_PROTOCOL_VERSION_HIGN;
 
-    scan_rsp_data[10] = TUYA_BLE_SECURE_CONNECTION_TYPE;
+    scan_rsp_data[8] = TUYA_BLE_SECURE_CONNECTION_TYPE;
 
-    scan_rsp_data[11] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
-    scan_rsp_data[12] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    scan_rsp_data[9] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
+    scan_rsp_data[10] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    
+    if(tuya_ble_current_para.pid_len==20)
+    {
+        scan_rsp_data[11] |=0x01 ;
+    }
+    else
+    {
+        scan_rsp_data[11] &=(~0x01);
+    }
 
     if(tuya_ble_current_para.sys_settings.bound_flag == 1)
     {
-        scan_rsp_data[8] |=0x80 ;
+        adv_data[11] |=0x08 ;
         //
         memcpy(aes_key,tuya_ble_current_para.sys_settings.login_key,LOGIN_KEY_LEN);
         memcpy(aes_key+LOGIN_KEY_LEN,tuya_ble_current_para.auth_settings.device_id,16-LOGIN_KEY_LEN);
@@ -395,29 +617,26 @@ void tuya_ble_adv_change(void)
 
         tuya_ble_encrypt_old_with_key(aes_key,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,aes_buf);
 
-        memcpy(&adv_data[12],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
+        memcpy(&adv_data[15],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
 
         tuya_ble_free(aes_buf);
 
-        memset(aes_key,0,sizeof(aes_key));
-        memcpy(aes_key,&adv_data[12],tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
 
-        tuya_ble_device_id_encrypt(aes_key,tuya_ble_current_para.pid_len,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
-
-        memcpy(&scan_rsp_data[14],encry_device_id,DEVICE_ID_LEN);
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
 
     }
     else
     {
-        scan_rsp_data[8] &=(~0x80);
+        adv_data[11] &=(~0x08);
 
-        memcpy(&adv_data[12],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
-        tuya_ble_device_id_encrypt(tuya_ble_current_para.pid,tuya_ble_current_para.pid_len,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+        memcpy(&adv_data[15],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
 
-        memcpy(&scan_rsp_data[14],encry_device_id,DEVICE_ID_LEN);
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
     }
     TUYA_BLE_LOG_INFO("adv data changed ,current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
-    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+12);
+    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+15);
     tuya_ble_gap_advertising_scan_rsp_data_update(scan_rsp_data,sizeof(scan_rsp_data));
 
 }
@@ -431,21 +650,33 @@ void tuya_ble_adv_change_with_connecting_request(void)
     memcpy(adv_data,adv_data_const,TUYA_BLE_ADV_DATA_LEN);
     memcpy(&scan_rsp_data,scan_rsp_data_const,TUYA_BLE_SCAN_RSP_DATA_LEN);
 
-    adv_data[7] = 4+tuya_ble_current_para.pid_len;
-    adv_data[11] = tuya_ble_current_para.pid_type;
-
-    scan_rsp_data[8] |= 0x01 ;
+    adv_data[7] = 7+tuya_ble_current_para.pid_len;
     
-    scan_rsp_data[9] = TUYA_BLE_PROTOCOL_VERSION_HIGN;
+    adv_data[13] = tuya_ble_current_para.pid_type;
+    adv_data[14] = tuya_ble_current_para.pid_len;
+    
+    adv_data[11] &=(~0x04);
+            
+    adv_data[11] |= 0x02;
 
-    scan_rsp_data[10] = TUYA_BLE_SECURE_CONNECTION_TYPE;
 
-    scan_rsp_data[11] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
-    scan_rsp_data[12] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    scan_rsp_data[8] = TUYA_BLE_SECURE_CONNECTION_TYPE;
+
+    scan_rsp_data[9] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY>>8;
+    scan_rsp_data[10] = TUYA_BLE_DEVICE_COMMUNICATION_ABILITY;
+    
+    if(tuya_ble_current_para.pid_len==20)
+    {
+        scan_rsp_data[11] |=0x01 ;
+    }
+    else
+    {
+        scan_rsp_data[11] &=(~0x01);
+    }
 
     if(tuya_ble_current_para.sys_settings.bound_flag == 1)
     {
-        scan_rsp_data[8] |=0x80 ;
+        adv_data[11] |=0x08 ;
         //
         memcpy(aes_key,tuya_ble_current_para.sys_settings.login_key,LOGIN_KEY_LEN);
         memcpy(aes_key+LOGIN_KEY_LEN,tuya_ble_current_para.auth_settings.device_id,16-LOGIN_KEY_LEN);
@@ -463,35 +694,33 @@ void tuya_ble_adv_change_with_connecting_request(void)
 
         tuya_ble_encrypt_old_with_key(aes_key,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,aes_buf);
 
-        memcpy(&adv_data[12],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
+        memcpy(&adv_data[15],(uint8_t *)(aes_buf+1),tuya_ble_current_para.pid_len);
 
         tuya_ble_free(aes_buf);
 
-        memset(aes_key,0,sizeof(aes_key));
-        memcpy(aes_key,&adv_data[12],tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
 
-        tuya_ble_device_id_encrypt(aes_key,tuya_ble_current_para.pid_len,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
-
-        memcpy(&scan_rsp_data[14],encry_device_id,DEVICE_ID_LEN);
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
 
     }
     else
     {
-        scan_rsp_data[8] &=(~0x80);
+        adv_data[11] &=(~0x08);
 
-        memcpy(&adv_data[12],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
-        tuya_ble_device_id_encrypt(tuya_ble_current_para.pid,tuya_ble_current_para.pid_len,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
+        memcpy(&adv_data[15],tuya_ble_current_para.pid,tuya_ble_current_para.pid_len);
+        tuya_ble_device_id_encrypt_v4(&adv_data[11],adv_data[7]-3,tuya_ble_current_para.auth_settings.device_id,DEVICE_ID_LEN,encry_device_id);
 
-
-        memcpy(&scan_rsp_data[14],encry_device_id,DEVICE_ID_LEN);
+        memcpy(&scan_rsp_data[12],encry_device_id,DEVICE_ID_LEN);
     }
     TUYA_BLE_LOG_INFO("adv data changed ,current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
-    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+12);
+    tuya_ble_gap_advertising_adv_data_update(adv_data,tuya_ble_current_para.pid_len+15);
     tuya_ble_gap_advertising_scan_rsp_data_update(scan_rsp_data,sizeof(scan_rsp_data));
 
 }
 
-#else
+#endif
+
+#if (TUYA_BLE_PROTOCOL_VERSION_HIGN==2)
 
 /** @brief  GAP - scan response data (max size = 31 bytes) */
 static const uint8_t scan_rsp_data_const[30] =

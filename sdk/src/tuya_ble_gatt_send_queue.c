@@ -133,5 +133,3 @@ tuya_ble_status_t tuya_ble_gatt_send_data_enqueue(uint8_t *p_data, uint8_t data_
 }
 
 
-
-

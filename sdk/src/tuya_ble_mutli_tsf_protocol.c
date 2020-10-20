@@ -201,7 +201,7 @@ mtp_ret trsmitr_send_pkg_encode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t version
         return MTP_COM_ERROR;
     }
 
-    uint8_t sunpkg_offset = 0;
+    uint16_t sunpkg_offset = 0;
 
     // package code
     // subpackage num encode
@@ -244,15 +244,119 @@ mtp_ret trsmitr_send_pkg_encode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t version
     }
 
     // frame data transfer
-    uint8_t send_data = (SNGL_PKG_TRSFR_LMT - sunpkg_offset);
-    if ((len - frm_trsmitr->pkg_trsmitr_cnt) < send_data) {
-        send_data = len - frm_trsmitr->pkg_trsmitr_cnt;
+    uint16_t send_data_len = (SNGL_PKG_TRSFR_LMT - sunpkg_offset);
+    if ((len - frm_trsmitr->pkg_trsmitr_cnt) < send_data_len) {
+        send_data_len = len - frm_trsmitr->pkg_trsmitr_cnt;
     }
 
-    memcpy(&(frm_trsmitr->subpkg[sunpkg_offset]), buf + frm_trsmitr->pkg_trsmitr_cnt, send_data);
-    frm_trsmitr->subpkg_len = sunpkg_offset+send_data;
+    memcpy(&(frm_trsmitr->subpkg[sunpkg_offset]), buf + frm_trsmitr->pkg_trsmitr_cnt, send_data_len);
+    frm_trsmitr->subpkg_len = sunpkg_offset+send_data_len;
 
-    frm_trsmitr->pkg_trsmitr_cnt += send_data;
+    frm_trsmitr->pkg_trsmitr_cnt += send_data_len;
+    if (0 == frm_trsmitr->subpkg_num) {
+        frm_trsmitr->pkg_desc = FRM_PKG_FIRST;
+    } else {
+        frm_trsmitr->pkg_desc = FRM_PKG_MIDDLE;
+    }
+
+    if (frm_trsmitr->pkg_trsmitr_cnt < frm_trsmitr->total) {
+        frm_trsmitr->subpkg_num++;
+        return MTP_TRSMITR_CONTINUE;
+    }
+
+    frm_trsmitr->pkg_desc = FRM_PKG_END;
+    return MTP_OK;
+}
+
+/***********************************************************
+*  Function: trsmitr_send_pkg_encode_with_packet_length
+*  description: Encoding function for specifying sub-packet length
+*
+*
+*
+*  Input:
+*  Output:
+*  Return: MTP_OK->buf send up
+*          MTP_TRSMITR_CONTINUE->need call again to be continue
+*          other->error
+*  Note: could get from encode data len and encode data by calling method
+         get_trsmitr_subpkg_len() and get_trsmitr_subpkg()
+***********************************************************/
+mtp_ret trsmitr_send_pkg_encode_with_packet_length(frm_trsmitr_proc_s *frm_trsmitr,uint32_t pkg_len_max, uint8_t version, uint8_t *buf, uint32_t len)
+{
+    if (((void *)0) == frm_trsmitr) {
+        return MTP_INVALID_PARAM;
+    }
+
+    if ((pkg_len_max==0)||(pkg_len_max>SNGL_PKG_TRSFR_LMT))
+    {
+        return MTP_INVALID_PARAM;
+    }
+
+    if (FRM_PKG_INIT == frm_trsmitr->pkg_desc) {
+        frm_trsmitr->total = len;
+        frm_trsmitr->version = version;
+        frm_trsmitr->seq = get_frame_seq();
+        frm_trsmitr->subpkg_num = 0;
+        frm_trsmitr->pkg_trsmitr_cnt = 0;
+    }
+
+    if (frm_trsmitr->subpkg_num >= 0x10000000 || len >= 0x10000000) {
+        return MTP_COM_ERROR;
+    }
+
+    uint16_t sunpkg_offset = 0;
+
+    // package code
+    // subpackage num encode
+    int32_t i;
+    uint32_t tmp = 0;
+    tmp = frm_trsmitr->subpkg_num;
+    for (i = 0; i < 4; i++)
+    {
+        frm_trsmitr->subpkg[sunpkg_offset] = tmp % 0x80;
+        if ((tmp / 0x80))
+        {
+            frm_trsmitr->subpkg[sunpkg_offset] |= 0x80;
+        }
+        sunpkg_offset++;
+        tmp /= 0x80;
+        if(0 == tmp)
+        {
+            break;
+        }
+    }
+
+    // the first package include the frame total len
+    if (0 == frm_trsmitr->subpkg_num) {
+        // frame len encode
+        tmp = len;
+        for (i = 0; i < 4; i++) {
+            frm_trsmitr->subpkg[sunpkg_offset] = tmp % 0x80;
+            if ((tmp / 0x80)) {
+                frm_trsmitr->subpkg[sunpkg_offset] |= 0x80;
+            }
+            sunpkg_offset++;
+            tmp /= 0x80;
+            if(0 == tmp) {
+                break;
+            }
+        }
+
+        // frame type and frame seq
+        frm_trsmitr->subpkg[sunpkg_offset++] = (frm_trsmitr->version << 0x04) | (frm_trsmitr->seq & 0x0f);
+    }
+
+    // frame data transfer
+    uint16_t send_data_len = (pkg_len_max - sunpkg_offset);
+    if ((len - frm_trsmitr->pkg_trsmitr_cnt) < send_data_len) {
+        send_data_len = len - frm_trsmitr->pkg_trsmitr_cnt;
+    }
+
+    memcpy(&(frm_trsmitr->subpkg[sunpkg_offset]), buf + frm_trsmitr->pkg_trsmitr_cnt, send_data_len);
+    frm_trsmitr->subpkg_len = sunpkg_offset + send_data_len;
+
+    frm_trsmitr->pkg_trsmitr_cnt += send_data_len;
     if (0 == frm_trsmitr->subpkg_num) {
         frm_trsmitr->pkg_desc = FRM_PKG_FIRST;
     } else {
@@ -270,11 +374,10 @@ mtp_ret trsmitr_send_pkg_encode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t version
 
 
 
-mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_data, uint8_t raw_data_len)
+mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_data, uint16_t raw_data_len)
 {
-    if (NULL == raw_data || \
-            (raw_data_len > SNGL_PKG_TRSFR_LMT) || \
-            NULL == frm_trsmitr) {
+    if (NULL == raw_data || (raw_data_len > SNGL_PKG_TRSFR_LMT) || NULL == frm_trsmitr)
+    {
         return MTP_INVALID_PARAM;
     }
 
@@ -285,7 +388,7 @@ mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_da
         frm_trsmitr->pkg_trsmitr_cnt = 0;
     }
 
-    uint8_t sunpkg_offset = 0;
+    uint16_t sunpkg_offset = 0;
     // package code
     // subpackage num decode
     int32_t i;
@@ -336,6 +439,7 @@ mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_da
             return MTP_TRSMITR_ERROR;
         }
     }
+
     frm_trsmitr->subpkg_num = subpkg_num;
 
     if (0 == frm_trsmitr->subpkg_num)
@@ -364,22 +468,22 @@ mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_da
         frm_trsmitr->seq = raw_data[sunpkg_offset++] & FRM_SEQ_OFFSET;
     }
 
-    uint8_t recv_data = raw_data_len - sunpkg_offset;
-    if((frm_trsmitr->total - frm_trsmitr->pkg_trsmitr_cnt) < recv_data)
+    uint8_t recv_data_len = raw_data_len - sunpkg_offset;
+    if((frm_trsmitr->total - frm_trsmitr->pkg_trsmitr_cnt) < recv_data_len)
     {
-        recv_data = frm_trsmitr->total - frm_trsmitr->pkg_trsmitr_cnt;
+        recv_data_len = frm_trsmitr->total - frm_trsmitr->pkg_trsmitr_cnt;
     }
 
     // decode data cp to transmitter subpackage buf
-    memcpy(frm_trsmitr->subpkg, &raw_data[sunpkg_offset], recv_data);
-    frm_trsmitr->subpkg_len = recv_data;
-    frm_trsmitr->pkg_trsmitr_cnt += recv_data;
+    memcpy(frm_trsmitr->subpkg, &raw_data[sunpkg_offset], recv_data_len);
+    frm_trsmitr->subpkg_len = recv_data_len;
+    frm_trsmitr->pkg_trsmitr_cnt += recv_data_len;
 
     if (frm_trsmitr->pkg_trsmitr_cnt < frm_trsmitr->total)
     {
         return MTP_TRSMITR_CONTINUE;
     }
-
+    //cannot add 'frm_trsmitr->pkg_desc = FRM_PKG_END;' here.
     return MTP_OK;
 }
 /***********************************************************
@@ -417,18 +521,18 @@ void free_klv_list(klv_node_s *list)
 *  Output:
 *  Return:
 ***********************************************************/
-klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
-                          void *data,uint8_t len)
+klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,void *p_data,uint16_t len)
 {
-    klv_node_s *node;
+    klv_node_s *node = NULL;
+    uint32_t tmp4 = 0,tmp2=0;
 
-    if(NULL == data || type >= DT_LMT) {
+    if(NULL == p_data || type >= DT_LMT) {
         return NULL;
     }
 
     if(DT_VALUE == type && DT_VALUE_LEN != len) {
         goto err_ret;
-    } else if(DT_BITMAP == type && len > DT_BITMAP_MAX) {
+    } else if(DT_BITMAP == type && len != 1 && len != 2 && len != DT_BITMAP_MAX) {
         goto err_ret;
     } else if(DT_BOOL == type && DT_BOOL_LEN != len) {
         goto err_ret;
@@ -458,20 +562,43 @@ klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
     node->len = len;
     node->type = type;
 
-    if(DT_VALUE == type || \
-            DT_BITMAP == type)
+    if(DT_VALUE == type)
     {   // change to big-end
-        uint32_t tmp = *(uint32_t *)data;
+        tmp4 = *(uint32_t *)p_data;
         // unsigned char shift = 0;
-        node->data[0] = (tmp >> 24) & 0xff;
-        node->data[1] = (tmp >> 16) & 0xff;
-        node->data[2] = (tmp >> 8) & 0xff;
-        node->data[3] = (tmp >> 0) & 0xff;
+        node->data[0] = (tmp4 >> 24) & 0xff;
+        node->data[1] = (tmp4 >> 16) & 0xff;
+        node->data[2] = (tmp4 >> 8) & 0xff;
+        node->data[3] = (tmp4 >> 0) & 0xff;
+    }
+    else if(DT_BITMAP == type)
+    {
+        if(len==4)
+        {
+            tmp4 = *(uint32_t *)p_data;
+            // unsigned char shift = 0;
+            node->data[0] = (tmp4 >> 24) & 0xff;
+            node->data[1] = (tmp4 >> 16) & 0xff;
+            node->data[2] = (tmp4 >> 8) & 0xff;
+            node->data[3] = (tmp4 >> 0) & 0xff;
+        }
+        else if(len==2)
+        {
+            tmp2 = *(uint16_t *)p_data;
+            node->data[0] = (tmp2 >> 8) & 0xff;
+            node->data[1] = (tmp2 >> 0) & 0xff;
+        }
+        else
+        {
+            node->data[0] = *(uint8_t *)p_data;
+        }
     }
     else
     {
         if(len>0)
-            memcpy((void *)node->data,(uint8_t*)data,len);
+        {
+            memcpy((void *)node->data,(uint8_t*)p_data,len);
+        }
     }
     node->next = list;
     return node;
@@ -627,7 +754,7 @@ mtp_ret data_2_klvlist(uint8_t *data,uint32_t len,klv_node_s **list,uint8_t type
         }
         if(node->len>0)
             memcpy(node->data,&data[offset],node->len);
-        
+
         offset += node->len;
 
         node->next = klv_list;

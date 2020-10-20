@@ -144,12 +144,6 @@
 #define  TUYA_BLE_USE_PLATFORM_MEMORY_HEAP   0 
 #endif
 
-/*
- * 
- */
-#ifndef  TUYA_BLE_GATT_SEND_DATA_QUEUE_SIZE
-#define TUYA_BLE_GATT_SEND_DATA_QUEUE_SIZE 10
-#endif
 
 /*
  * if defined ,include UART module
@@ -210,7 +204,12 @@
 #define TUYA_BLE_ADVANCED_ENCRYPTION_DEVICE 0
 #endif
 
-
+/*
+ * If it is 1, then sdk need to request beacon key from app when binding .
+ */
+#ifndef TUYA_BLE_BEACON_KEY_ENABLE
+#define TUYA_BLE_BEACON_KEY_ENABLE  0
+#endif
 
 //nv
 /* The minimum size of flash erasure. May be a flash sector size. */
@@ -238,6 +237,10 @@
 
 #ifndef TUYA_BLE_APP_BUILD_FIRMNAME_STRING
 #define TUYA_BLE_APP_BUILD_FIRMNAME_STRING  "tuya_ble_sdk_app_demo_xxx"  
+#endif
+
+#ifndef TUYA_BLE_APP_FIRMWARE_KEY
+#define TUYA_BLE_APP_FIRMWARE_KEY  ""  
 #endif
 
 #endif

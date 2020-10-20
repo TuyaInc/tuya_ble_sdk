@@ -186,8 +186,10 @@ void tuya_sched_execute(void)
     tuya_ble_evt_param_t *evt;
     
     evt = &tuya_ble_evt;
+    
+    uint8_t end_ix = m_queue_end_index;
 
-    while (!TUYA_BLE_SCHED_QUEUE_EMPTY())
+    while (m_queue_start_index != end_ix)//(!TUYA_BLE_SCHED_QUEUE_EMPTY())
     {
         // Since this function is only called from the main loop, there is no
         // need for a critical region here, however a special care must be taken

@@ -34,6 +34,7 @@ void tuya_ble_storage_save_auth_settings_async(tuya_ble_nv_async_callback_t call
 
 void tuya_ble_storage_init_async(void *p_param,tuya_ble_nv_async_callback_t callback);
 
+uint8_t tuya_ble_get_storage_save_sys_settings_flag(void);
 
 #if (TUYA_BLE_DEVICE_AUTH_DATA_STORE)
 

@@ -265,6 +265,12 @@ void tuya_ble_storage_save_sys_settings_async(tuya_ble_nv_async_callback_t callb
 }
 
 
+uint8_t tuya_ble_get_storage_save_sys_settings_flag(void)
+{
+    return tuya_ble_storage_save_sys_settings_flag;
+}
+
+
 /*********************************************************************************************************************************************
 tuya_ble_storage_save_auth_settings_async:
 **********************************************************************************************************************************************/

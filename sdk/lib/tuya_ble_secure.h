@@ -49,6 +49,8 @@ uint8_t tuya_ble_encryption(uint8_t encryption_mode,uint8_t *iv,uint8_t *in_buf,
 
 uint8_t  tuya_ble_encrypt_old_with_key(uint8_t *key,uint8_t *in_buf,uint8_t in_len,uint8_t *out_buf);
 
+bool tuya_ble_device_id_encrypt_v4(uint8_t *key_in,uint16_t key_len,uint8_t *input,uint16_t input_len,uint8_t *output);
+
 bool tuya_ble_device_id_encrypt(uint8_t *key_in,uint16_t key_len,uint8_t *input,uint16_t input_len,uint8_t *output);
 
 bool tuya_ble_device_id_decrypt(uint8_t *key_in,uint16_t key_len,uint8_t *input,uint16_t input_len,uint8_t *output);

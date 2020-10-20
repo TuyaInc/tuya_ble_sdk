@@ -3,6 +3,40 @@
 
 
 
+## [2.0.0] - 2020-10-04
+
+### Added
+
+- Added support for MTU larger than 20 bytes for adapting applications running BLE4.2 and above.
+- Added a new dp data receiving and sending function, which can send and receive dp data with a length of more than 255 bytes, and supports the sending mode without response.
+- Added device unbinding function, which is different from the factory reset function and will not lose cloud historical data after binding again.
+- Added asynchronous response of unbinding and factory reset functions.
+- Added support for BEACON KEY.
+
+### Changed
+
+- Changed the queue scheduling mechanism under non-RTOS systems to prevent SDK from occupying CPU for a long time.
+- Modify `TUYA_BLE_GATT_SEND_DATA_QUEUE_SIZE` to be automatically configured by the SDK.
+
+### Fixed
+
+- Fixed a bug that the device will automatic restart when continuously calling the `tuya_ble_device_factory_reset()`function.
+
+
+
+## [1.3.0] - 2020-08-07
+
+### Changed
+
+- Use the new Tuya exclusive service uuid and characteristic uuid.
+- Changed advertising packets format  to adapt to the new service uuid.
+
+### Fixed
+
+- Changed the time point at which the application callback is executed during unbinding to prevent the application from performing a reset operation in the corresponding callback function to cause unbinding failure.
+
+
+
 ## [1.2.6] - 2020-07-13
 
 ### Added

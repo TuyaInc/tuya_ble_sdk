@@ -50,6 +50,25 @@ __TUYA_BLE_WEAK void tuya_ble_handle_dp_data_with_time_string_reported_evt(tuya_
 
 }
 
+
+__TUYA_BLE_WEAK void tuya_ble_handle_dp_data_send_evt(tuya_ble_evt_param_t *evt)
+{
+
+}
+
+
+__TUYA_BLE_WEAK void tuya_ble_handle_dp_data_with_time_send_evt(tuya_ble_evt_param_t *evt)
+{
+
+}
+
+
+__TUYA_BLE_WEAK void tuya_ble_handle_device_unbind_evt(tuya_ble_evt_param_t *evt)
+{
+
+}
+
+
 __TUYA_BLE_WEAK void tuya_ble_handle_factory_reset_evt(tuya_ble_evt_param_t *evt)
 {
 

@@ -30,31 +30,61 @@
 #include "tuya_ble_config.h"
 #include "tuya_ble_port.h"
 
-#if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==0)
-/*
- * MACRO for memory management
- */
-#define TUYA_BLE_TOTAL_HEAP_SIZE   ( 1536 )
 
-#endif
+#define MAX_NUMBER_OF_TUYA_MESSAGE        16      //!<  tuya ble message queue size
 
-#define MAX_NUMBER_OF_TUYA_MESSAGE        0x10      //!<  tuya ble message queue size
 
-#define TUYA_BLE_AIR_FRAME_MAX  1024
+//BLE Communication protocol version v4.1 
+#define TUYA_BLE_PROTOCOL_VERSION_HIGN   0x04
+#define TUYA_BLE_PROTOCOL_VERSION_LOW    0x01
 
+#define TUYA_BLE_DP_WRITE_CURRENT_VERSION   0
+
+#if (TUYA_BLE_PROTOCOL_VERSION_HIGN>=4)
+
+#define TUYA_BLE_AIR_FRAME_MAX                    1536
+
+#define TUYA_UART_RECEIVE_MAX_DP_DATA_LEN         (512+4)
+
+#define TUYA_UART_RECEIVE_MAX_DP_BUFFER_DATA_LEN  (512+4)
+
+#define TUYA_BLE_RECEIVE_MAX_DP_DATA_LEN          (512+4)
+
+#define TUYA_BLE_SEND_MAX_DP_DATA_LEN              TUYA_BLE_RECEIVE_MAX_DP_DATA_LEN
+
+#define TUYA_BLE_SEND_MAX_DATA_LEN                 (((TUYA_BLE_AIR_FRAME_MAX-17)/16)*16-14)
+
+#define TUYA_BLE_RECEIVE_MAX_DATA_LEN              TUYA_BLE_SEND_MAX_DATA_LEN
+
+#else
+
+#define TUYA_BLE_AIR_FRAME_MAX                    1024
 
 #define TUYA_UART_RECEIVE_MAX_DP_DATA_LEN         (255+4)
+
 #define TUYA_UART_RECEIVE_MAX_DP_BUFFER_DATA_LEN  (255+4)
 
 #define TUYA_BLE_RECEIVE_MAX_DP_DATA_LEN          (255+3)
 
-#define TUYA_BLE_REPORT_MAX_DP_DATA_LEN           TUYA_BLE_RECEIVE_MAX_DP_DATA_LEN
+#define TUYA_BLE_SEND_MAX_DP_DATA_LEN             TUYA_BLE_RECEIVE_MAX_DP_DATA_LEN
 
-#define TUYA_BLE_TRANSMISSION_MAX_DATA_LEN       (TUYA_BLE_AIR_FRAME_MAX-29)
+#define TUYA_BLE_SEND_MAX_DATA_LEN                 (((TUYA_BLE_AIR_FRAME_MAX-17)/16)*16-14)
 
-//BLE Communication protocol version v3.3 
-#define TUYA_BLE_PROTOCOL_VERSION_HIGN   0x03
-#define TUYA_BLE_PROTOCOL_VERSION_LOW    0x03
+#define TUYA_BLE_RECEIVE_MAX_DATA_LEN              TUYA_BLE_SEND_MAX_DATA_LEN
+
+#endif
+
+
+#define TUYA_BLE_GATT_SEND_DATA_QUEUE_SIZE  (MAX_NUMBER_OF_TUYA_MESSAGE*3)
+
+
+#if (TUYA_BLE_USE_PLATFORM_MEMORY_HEAP==0)
+/*
+ * MACRO for memory management
+ */
+#define TUYA_BLE_TOTAL_HEAP_SIZE          4096
+
+#endif
 
 
 #ifndef TUYA_BLE_MAX_CALLBACKS

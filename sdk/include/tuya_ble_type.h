@@ -1,7 +1,7 @@
 /**
  * \file tuya_ble_type.h
  *
- * \brief 
+ * \brief
  */
 /*
  *  Copyright (C) 2014-2019, Tuya Inc., All Rights Reserved
@@ -19,7 +19,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  This file is part of tuya ble sdk 
+ *  This file is part of tuya ble sdk
  */
 
 
@@ -44,82 +44,82 @@
 
 #if defined ( __CC_ARM )
 
-    #ifndef __TUYA_BLE_ASM
-        #define __TUYA_BLE_ASM               __asm
-    #endif
+#ifndef __TUYA_BLE_ASM
+#define __TUYA_BLE_ASM               __asm
+#endif
 
-    #ifndef __TUYA_BLE_INLINE
-        #define __TUYA_BLE_INLINE            __inline
-    #endif
+#ifndef __TUYA_BLE_INLINE
+#define __TUYA_BLE_INLINE            __inline
+#endif
 
-    #ifndef __TUYA_BLE_WEAK
-        #define __TUYA_BLE_WEAK              __weak
-    #endif
+#ifndef __TUYA_BLE_WEAK
+#define __TUYA_BLE_WEAK              __weak
+#endif
 
-    #ifndef __TUYA_BLE_ALIGN
-        #define __TUYA_BLE_ALIGN(n)          __align(n)
-    #endif
+#ifndef __TUYA_BLE_ALIGN
+#define __TUYA_BLE_ALIGN(n)          __align(n)
+#endif
 
-    #ifndef __TUYA_BLE_PACKED
-        #define __TUYA_BLE_PACKED            __packed
-    #endif
+#ifndef __TUYA_BLE_PACKED
+#define __TUYA_BLE_PACKED            __packed
+#endif
 
-    #define TUYA_BLE_GET_SP()                __current_sp()
+#define TUYA_BLE_GET_SP()                __current_sp()
 
 #elif defined ( __ICCARM__ )
 
-    #ifndef __TUYA_BLE_ASM
-        #define __TUYA_BLE_ASM               __asm
-    #endif
+#ifndef __TUYA_BLE_ASM
+#define __TUYA_BLE_ASM               __asm
+#endif
 
-    #ifndef __TUYA_BLE_INLINE
-        #define __TUYA_BLE_INLINE            inline
-    #endif
+#ifndef __TUYA_BLE_INLINE
+#define __TUYA_BLE_INLINE            inline
+#endif
 
-    #ifndef __TUYA_BLE_WEAK
-        #define __TUYA_BLE_WEAK              __weak
-    #endif
+#ifndef __TUYA_BLE_WEAK
+#define __TUYA_BLE_WEAK              __weak
+#endif
 
-    #ifndef __TUYA_BLE_ALIGN
-        #define TUYA_BLE_STRING_PRAGMA(x) _Pragma(#x)
-        #define __TUYA_BLE_ALIGN(n) STRING_PRAGMA(data_alignment = n)
-    #endif
+#ifndef __TUYA_BLE_ALIGN
+#define TUYA_BLE_STRING_PRAGMA(x) _Pragma(#x)
+#define __TUYA_BLE_ALIGN(n) STRING_PRAGMA(data_alignment = n)
+#endif
 
-    #ifndef __TUYA_BLE_PACKED
-        #define __TUYA_BLE_PACKED            __packed
-    #endif
-    
-    #define TUYA_BLE_GET_SP()                __get_SP()
+#ifndef __TUYA_BLE_PACKED
+#define __TUYA_BLE_PACKED            __packed
+#endif
+
+#define TUYA_BLE_GET_SP()                __get_SP()
 
 #elif defined   ( __GNUC__ )
 
-    #ifndef __TUYA_BLE_ASM
-        #define __TUYA_BLE_ASM               __asm
-    #endif
+#ifndef __TUYA_BLE_ASM
+#define __TUYA_BLE_ASM               __asm
+#endif
 
-    #ifndef __TUYA_BLE_INLINE
-        #define __TUYA_BLE_INLINE            inline
-    #endif
+#ifndef __TUYA_BLE_INLINE
+#define __TUYA_BLE_INLINE            inline
+#endif
 
-    #ifndef __TUYA_BLE_WEAK
-        #define __TUYA_BLE_WEAK              __attribute__((weak))
-    #endif
+#ifndef __TUYA_BLE_WEAK
+#define __TUYA_BLE_WEAK              __attribute__((weak))
+#endif
 
-    #ifndef __TUYA_BLE_ALIGN
-        #define __TUYA_BLE_ALIGN(n)          __attribute__((aligned(n)))
-    #endif
+#ifndef __TUYA_BLE_ALIGN
+#define __TUYA_BLE_ALIGN(n)          __attribute__((aligned(n)))
+#endif
 
-    #ifndef __TUYA_BLE_PACKED
-        #define __TUYA_BLE_PACKED           __attribute__((packed)) 
-    #endif
+#ifndef __TUYA_BLE_PACKED
+#define __TUYA_BLE_PACKED           __attribute__((packed))
+#endif
 
-    #define TUYA_BLE_GET_SP()                tuya_ble_gcc_current_sp()
+#define TUYA_BLE_GET_SP()                tuya_ble_gcc_current_sp()
 
-    static inline unsigned int tuya_ble_gcc_current_sp(void)
-    {
-        register unsigned sp __asm("sp");
-        return sp;
-    }
+static inline unsigned int tuya_ble_gcc_current_sp(void)
+{
+    register unsigned sp __asm("sp");
+    return sp;
+}
 #endif
 
 
@@ -128,7 +128,6 @@
 
 #define H_ID_LEN              19
 #define TUYA_BLE_PRODUCT_ID_DEFAULT_LEN        8
-//#define PRODUCT_KEY_LEN       TUYA_BLE_PRODUCT_ID_OR_KEY_LEN
 #define DEVICE_ID_LEN         16
 #define DEVICE_ID_LEN_MAX     20
 #define AUTH_KEY_LEN          32
@@ -138,6 +137,7 @@
 #define SECRET_KEY_LEN        16
 #define PAIR_RANDOM_LEN       6
 #define MAC_LEN               6
+#define BEACON_KEY_LEN        16
 
 #define TUYA_BLE_PRODUCT_ID_MAX_LEN  16
 
@@ -199,10 +199,10 @@ typedef enum {
 
 
 
-typedef enum{
+typedef enum {
     TUYA_BLE_PRODUCT_ID_TYPE_PID,
-    TUYA_BLE_PRODUCT_ID_TYPE_PRODUCT_KEY,   
-}tuya_ble_product_id_type_t;
+    TUYA_BLE_PRODUCT_ID_TYPE_PRODUCT_KEY,
+} tuya_ble_product_id_type_t;
 
 
 typedef enum {
@@ -212,24 +212,25 @@ typedef enum {
 
 typedef struct {
     tuya_ble_addr_type_t addr_type;
-    uint8_t addr[6];    
-}tuya_ble_gap_addr_t;
+    uint8_t addr[6];
+} tuya_ble_gap_addr_t;
 
-typedef struct{
+typedef struct {
     uint8_t device_id_len;   //if ==20,Compressed into 16
-	uint8_t device_id[DEVICE_ID_LEN_MAX];
+    uint8_t device_id[DEVICE_ID_LEN_MAX];
     tuya_ble_product_id_type_t p_type;
     uint8_t product_id_len;
-	uint8_t product_id[TUYA_BLE_PRODUCT_ID_MAX_LEN];
+    uint8_t product_id[TUYA_BLE_PRODUCT_ID_MAX_LEN];
     uint8_t device_vid[DEVICE_VIRTUAL_ID_LEN];
-	uint8_t auth_key[AUTH_KEY_LEN];
-	uint8_t login_key[LOGIN_KEY_LEN];
+    uint8_t auth_key[AUTH_KEY_LEN];
+    uint8_t login_key[LOGIN_KEY_LEN];
+    uint8_t beacon_key[BEACON_KEY_LEN];
     uint8_t bound_flag;
     uint32_t firmware_version; //0x00010102 : v1.1.2
     uint32_t hardware_version;
     uint8_t reserve_1;
     uint8_t reserve_2;
-}tuya_ble_device_param_t;	
+} tuya_ble_device_param_t;
 
 
 typedef struct {
@@ -241,17 +242,20 @@ typedef struct {
 
 
 typedef enum {
-	TUYA_BLE_EVT_MTU_DATA_RECEIVE = TUYA_BLE_EVT_BASE,
+    TUYA_BLE_EVT_MTU_DATA_RECEIVE = TUYA_BLE_EVT_BASE,
     TUYA_BLE_EVT_DEVICE_INFO_UPDATE,
-	TUYA_BLE_EVT_DP_DATA_REPORTED,
-	TUYA_BLE_EVT_DP_DATA_WITH_TIME_REPORTED,
+    TUYA_BLE_EVT_DP_DATA_REPORTED,
+    TUYA_BLE_EVT_DP_DATA_WITH_TIME_REPORTED,
     TUYA_BLE_EVT_DP_DATA_WITH_TIME_STRING_REPORTED,
-	TUYA_BLE_EVT_FACTORY_RESET,
-	TUYA_BLE_EVT_OTA_RESPONSE,
+    TUYA_BLE_EVT_DP_DATA_SEND,
+    TUYA_BLE_EVT_DP_DATA_WITH_TIME_SEND,
+    TUYA_BLE_EVT_DEVICE_UNBIND,
+    TUYA_BLE_EVT_FACTORY_RESET,
+    TUYA_BLE_EVT_OTA_RESPONSE,
     TUYA_BLE_EVT_DATA_PASSTHROUGH,
     TUYA_BLE_EVT_PRODUCTION_TEST_RESPONSE,
-	TUYA_BLE_EVT_UART_CMD,
-	TUYA_BLE_EVT_BLE_CMD,
+    TUYA_BLE_EVT_UART_CMD,
+    TUYA_BLE_EVT_BLE_CMD,
     TUYA_BLE_EVT_NET_CONFIG_RESPONSE,
     TUYA_BLE_EVT_CUSTOM,
     TUYA_BLE_EVT_CONNECT_STATUS_UPDATE,
@@ -259,158 +263,217 @@ typedef enum {
     TUYA_BLE_EVT_ANOMALY_UNBOUND_RESPONSE,
     TUYA_BLE_EVT_DEVICE_RESET_RESPONSE,
     TUYA_BLE_EVT_TIME_REQ,
-	TUYA_BLE_EVT_GATT_SEND_DATA,
+    TUYA_BLE_EVT_GATT_SEND_DATA,
     TUYA_BLE_EVT_CONNECTING_REQUEST,
     TUYA_BLE_EVT_SAVE_SYS_SETTINGS_DATA_CALLBACK,
 } tuya_ble_evt_t;
 
 
-typedef struct{
-	uint8_t data[20];
-	uint8_t len;
-}tuya_ble_mtu_data_receive_t;    
+/*
+ * dp data report mode
+ *@note
+ * */
+typedef enum {
+    DP_SEND_FOR_CLOUD_PANEL = 0,   // The mobile app uploads the received dp data to the cloud and also sends it to the panel for display.
+    DP_SEND_FOR_CLOUD,             // The mobile app will only upload the received dp data to the cloud.
+    DP_SEND_FOR_PANEL,             // The mobile app will only send the received dp data to the panel display.
+    DP_SEND_FOR_NONE,              // Neither uploaded to the cloud nor sent to the panel display.
+} tuya_ble_dp_data_send_mode_t;
+
+
+typedef enum {
+    DP_SEND_TYPE_ACTIVE = 0,       // The device actively sends dp data.
+    DP_SEND_TYPE_PASSIVE,          // The device passively sends dp data. For example, in order to answer the dp query command of the mobile app. Currently only applicable to WIFI+BLE combo devices.
+} tuya_ble_dp_data_send_type_t;
+
+
+typedef enum {
+    DP_SEND_WITH_RESPONSE = 0,    //  Need a mobile app to answer. 
+    DP_SEND_WITHOUT_RESPONSE,     //  No need for mobile app to answer. 
+} tuya_ble_dp_data_send_ack_t;
+
+
+typedef struct {
+    uint8_t *p_data;           // Used when the length of mtu data is greater than 20.
+    uint8_t data[20];          // Used when the length of mtu data is less than or equal to 20, In order to improve communication efficiency in BLE4.0 devices.
+    uint16_t len;
+} tuya_ble_mtu_data_receive_t;
 
 
 
 
-typedef enum{
+typedef enum {
     DEVICE_INFO_TYPE_PID,
     DEVICE_INFO_TYPE_PRODUCT_KEY,
     DEVICE_INFO_TYPE_LOGIN_KEY,
-    DEVICE_INFO_TYPE_BOUND,    
-}tuya_ble_device_info_type_t;
+    DEVICE_INFO_TYPE_BOUND,
+    DEVICE_INFO_TYPE_BEACON_KEY,
+} tuya_ble_device_info_type_t;
 
 
-typedef struct{
-	tuya_ble_device_info_type_t type;
-	uint8_t len;
+typedef struct {
+    tuya_ble_device_info_type_t type;
+    uint8_t len;
     uint8_t data[32];
-}tuya_ble_device_info_data_t;  
+} tuya_ble_device_info_data_t;
 
 
 
-typedef struct{
-	uint8_t *p_data;
-	uint16_t data_len;
-}tuya_ble_dp_data_reported_t;    
+typedef struct {
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_data_reported_t;
 
 
-typedef struct{
+typedef struct {
     uint32_t timestamp;
-	uint8_t *p_data;
-	uint16_t data_len;
-}tuya_ble_dp_data_with_time_reported_t;   
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_data_with_time_reported_t;
 
 
-typedef struct{
+typedef struct {
     uint8_t time_string[13+1];
-	uint8_t *p_data;
-	uint16_t data_len;
-}tuya_ble_dp_data_with_time_string_reported_t;  
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_data_with_time_string_reported_t;
 
 
-typedef struct{
-	uint8_t reserve;
-}tuya_ble_factory_reset_t;  
+typedef struct {
+    uint32_t sn;
+    tuya_ble_dp_data_send_type_t type;
+    tuya_ble_dp_data_send_mode_t mode;
+    tuya_ble_dp_data_send_ack_t ack;
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_data_send_data_t;
 
-/*   
+
+typedef enum {   
+    DP_TIME_TYPE_MS_STRING = 0,
+    DP_TIME_TYPE_UNIX_TIMESTAMP,
+} tuya_ble_dp_data_send_time_type_t;
+
+
+typedef struct {
+    uint32_t sn;
+    tuya_ble_dp_data_send_type_t type;
+    tuya_ble_dp_data_send_mode_t mode;
+    tuya_ble_dp_data_send_ack_t ack;
+    tuya_ble_dp_data_send_time_type_t time_type;
+    uint8_t time_data[13+1];
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_data_with_time_send_data_t;
+
+
+typedef struct {
+    uint8_t reserve;
+} tuya_ble_device_unbind_t;
+
+
+typedef struct {
+    uint8_t reserve;
+} tuya_ble_factory_reset_t;
+
+/*
  * ota data
  * */
- 
-typedef enum 
+
+typedef enum
 {
-	TUYA_BLE_OTA_REQ,
-	TUYA_BLE_OTA_FILE_INFO,
-	TUYA_BLE_OTA_FILE_OFFSET_REQ,
-	TUYA_BLE_OTA_DATA,
+    TUYA_BLE_OTA_REQ,
+    TUYA_BLE_OTA_FILE_INFO,
+    TUYA_BLE_OTA_FILE_OFFSET_REQ,
+    TUYA_BLE_OTA_DATA,
     TUYA_BLE_OTA_END,
     TUYA_BLE_OTA_UNKONWN,
-}tuya_ble_ota_data_type_t; 
+} tuya_ble_ota_data_type_t;
 
 
-typedef struct{
-	tuya_ble_ota_data_type_t type;	
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_ota_response_t;
+typedef struct {
+    tuya_ble_ota_data_type_t type;
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_ota_response_t;
 
 
 
-typedef struct{
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_passthrough_data_t;
+typedef struct {
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_passthrough_data_t;
 
 
-typedef struct{
+typedef struct {
     uint8_t channel;
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_production_test_response_data_t;
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_production_test_response_data_t;
 
-typedef struct{
+typedef struct {
     uint32_t cmd;
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_uart_cmd_t;
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_uart_cmd_t;
 
 
-typedef struct{
+typedef struct {
     uint32_t cmd;
-	uint16_t data_len;
-	uint8_t *p_data;
-}tuya_ble_ble_cmd_t;
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_ble_cmd_t;
 
-typedef struct{
-	int16_t result_code;
-}tuya_ble_net_config_response_t;
-
-
-typedef struct{
-	uint8_t cmd;
-}tuya_ble_connecting_request_data_t;
+typedef struct {
+    int16_t result_code;
+} tuya_ble_net_config_response_t;
 
 
-typedef struct{
-  int32_t evt_id;  
-  void *data;
-  void (*custom_event_handler)(int32_t evt_id,void*data);
+typedef struct {
+    uint8_t cmd;
+} tuya_ble_connecting_request_data_t;
+
+
+typedef struct {
+    int32_t evt_id;
+    void *data;
+    void (*custom_event_handler)(int32_t evt_id,void*data);
 } tuya_ble_custom_evt_t;
 
 
-typedef enum{
+typedef enum {
     TUYA_BLE_CONNECTED,
     TUYA_BLE_DISCONNECTED,
-}tuya_ble_connect_status_change_t;
+} tuya_ble_connect_status_change_t;
 
 
-typedef struct{
-	uint8_t result_code;
-}tuya_ble_ubound_response_t;
+typedef struct {
+    uint8_t result_code;
+} tuya_ble_ubound_response_t;
 
 
-typedef struct{
-	uint8_t result_code;
-}tuya_ble_anomaly_ubound_response_t;
+typedef struct {
+    uint8_t result_code;
+} tuya_ble_anomaly_ubound_response_t;
 
 
-typedef struct{
-	uint8_t result_code;
-}tuya_ble_device_reset_response_t;
+typedef struct {
+    uint8_t result_code;
+} tuya_ble_device_reset_response_t;
 
-typedef struct{
-	uint8_t time_type;  //0-13-byte millisecond string ,1 - normal time format
-}tuya_ble_time_req_data_t;
+typedef struct {
+    uint8_t time_type;  //0-13-byte millisecond string ,1 - normal time format
+} tuya_ble_time_req_data_t;
 
-typedef struct{
-	uint8_t type;  //0-pair , 1-unbound req ,2- anomaly_unbound, 3-device reset
+typedef struct {
+    uint8_t type;  //0-pair , 1-unbound req ,2- anomaly_unbound, 3-device reset, 4-device unbind, 5-factory reset
     tuya_ble_status_t status;
     void *p_param;
-}tuya_ble_save_sys_settings_callback_data_t;
+} tuya_ble_save_sys_settings_callback_data_t;
 
-typedef struct{
-  tuya_ble_evt_t  event;
-  void (*event_handler)(void*evt);
+typedef struct {
+    tuya_ble_evt_t  event;
+    void (*event_handler)(void*evt);
 } tuya_ble_evt_hdr_t;
 
 
@@ -418,18 +481,21 @@ typedef struct{
  * tuya ble sdk evt parameters union
  * */
 typedef struct {
-	tuya_ble_evt_hdr_t hdr;
-	union {
-		tuya_ble_mtu_data_receive_t  mtu_data;
-		tuya_ble_device_info_data_t  device_info_data;
-		tuya_ble_dp_data_reported_t  reported_data;
-		tuya_ble_dp_data_with_time_reported_t       reported_with_time_data;
+    tuya_ble_evt_hdr_t hdr;
+    union {
+        tuya_ble_mtu_data_receive_t  mtu_data;
+        tuya_ble_device_info_data_t  device_info_data;
+        tuya_ble_dp_data_reported_t  reported_data;
+        tuya_ble_dp_data_with_time_reported_t       reported_with_time_data;
         tuya_ble_dp_data_with_time_string_reported_t reported_with_time_string_data;
-		tuya_ble_factory_reset_t   factory_reset_data;
-		tuya_ble_ota_response_t ota_response_data;
-		tuya_ble_passthrough_data_t passthrough_data;
+        tuya_ble_dp_data_send_data_t dp_send_data;
+        tuya_ble_dp_data_with_time_send_data_t dp_with_time_send_data;
+        tuya_ble_device_unbind_t   device_unbind_data;
+        tuya_ble_factory_reset_t   factory_reset_data;
+        tuya_ble_ota_response_t ota_response_data;
+        tuya_ble_passthrough_data_t passthrough_data;
         tuya_ble_production_test_response_data_t prod_test_res_data;
-		tuya_ble_uart_cmd_t uart_cmd_data;
+        tuya_ble_uart_cmd_t uart_cmd_data;
         tuya_ble_ble_cmd_t    ble_cmd_data;
         tuya_ble_net_config_response_t net_config_response_data;
         tuya_ble_custom_evt_t custom_evt;
@@ -440,7 +506,7 @@ typedef struct {
         tuya_ble_time_req_data_t  time_req_data;
         tuya_ble_connecting_request_data_t connecting_request_data;
         tuya_ble_save_sys_settings_callback_data_t sys_settings_save_callback_data;
-	};
+    };
 } tuya_ble_evt_param_t;
 
 
@@ -450,172 +516,226 @@ typedef struct {
  * tuya ble call back event type.
  * */
 typedef enum {
-    TUYA_BLE_CB_EVT_CONNECTE_STATUS = TUYA_BLE_CB_EVT_BASE, 
-    TUYA_BLE_CB_EVT_DP_WRITE, 
-	TUYA_BLE_CB_EVT_DP_QUERY,
-	TUYA_BLE_CB_EVT_OTA_DATA,
-	TUYA_BLE_CB_EVT_NETWORK_INFO,
-	TUYA_BLE_CB_EVT_WIFI_SSID,
-	TUYA_BLE_CB_EVT_TIME_STAMP,
-	TUYA_BLE_CB_EVT_TIME_NORMAL,
+    TUYA_BLE_CB_EVT_CONNECTE_STATUS = TUYA_BLE_CB_EVT_BASE,
+    TUYA_BLE_CB_EVT_DP_WRITE,    // old version
+    TUYA_BLE_CB_EVT_DP_QUERY,
+    TUYA_BLE_CB_EVT_DP_DATA_RECEIVED,  // new version
+    TUYA_BLE_CB_EVT_OTA_DATA,
+    TUYA_BLE_CB_EVT_NETWORK_INFO,
+    TUYA_BLE_CB_EVT_WIFI_SSID,
+    TUYA_BLE_CB_EVT_TIME_STAMP,
+    TUYA_BLE_CB_EVT_TIME_NORMAL,
     TUYA_BLE_CB_EVT_DATA_PASSTHROUGH,
-    TUYA_BLE_CB_EVT_DP_DATA_REPORT_RESPONSE,
-    TUYA_BLE_CB_EVT_DP_DATA_WTTH_TIME_REPORT_RESPONSE,
+    TUYA_BLE_CB_EVT_DP_DATA_REPORT_RESPONSE,             // old version
+    TUYA_BLE_CB_EVT_DP_DATA_WTTH_TIME_REPORT_RESPONSE,   // old version
+    TUYA_BLE_CB_EVT_DP_DATA_SEND_RESPONSE,               // new version
+    TUYA_BLE_CB_EVT_DP_DATA_WITH_TIME_SEND_RESPONSE,     // new version
     TUYA_BLE_CB_EVT_UNBOUND,
     TUYA_BLE_CB_EVT_ANOMALY_UNBOUND,
     TUYA_BLE_CB_EVT_DEVICE_RESET,
     TUYA_BLE_CB_EVT_UPDATE_LOGIN_KEY_VID,
+    TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE,               // Notify the application of the result of the local reset
 } tuya_ble_cb_evt_t;
 
-/*   
+/*
  * current connect status
- *@note 
+ *@note
  * */
-typedef enum{
-    UNBONDING_UNCONN = 0,   
+typedef enum {
+    UNBONDING_UNCONN = 0,
     UNBONDING_CONN,
     BONDING_UNCONN,
     BONDING_CONN,
-    BONDING_UNAUTH_CONN,  
+    BONDING_UNAUTH_CONN,
     UNBONDING_UNAUTH_CONN,
     UNKNOW_STATUS
-}tuya_ble_connect_status_t;
+} tuya_ble_connect_status_t;
 
 /*
  * dp data  buffer:  (Dp_id,Dp_type,Dp_len,Dp_data),(Dp_id,Dp_type,Dp_len,Dp_data),....
  * */
-typedef struct{
-	uint8_t *p_data;
-	uint16_t data_len;
-}tuya_ble_dp_write_data_t;
+typedef struct {
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_write_data_t;
 
 /*
  * query dp point data,if data_len is 0,means query all dp point data,otherwise query the dp point in p_data buffer.
  * */
-typedef struct{
-	uint8_t *p_data;
-	uint16_t data_len;
-}tuya_ble_dp_query_data_t;
+typedef struct {
+    uint8_t *p_data;
+    uint16_t data_len;
+} tuya_ble_dp_query_data_t;
 
- 
+
+/*
+* dp data  buffer(Dp_len:2):  (Dp_id,Dp_type,Dp_len,Dp_data),(Dp_id,Dp_type,Dp_len,Dp_data),....
+ * */
 typedef struct{
-	tuya_ble_ota_data_type_t type;	
-	uint16_t data_len;
+    uint32_t sn;
 	uint8_t *p_data;
-}tuya_ble_ota_data_t;
+	uint16_t data_len;
+}tuya_ble_dp_data_received_data_t;
+
+
+typedef struct {
+    tuya_ble_ota_data_type_t type;
+    uint16_t data_len;
+    uint8_t *p_data;
+} tuya_ble_ota_data_t;
 
 /*
  * network data,unformatted json data,for example " {"wifi_ssid":"tuya","password":"12345678","token":"xxxxxxxxxx"} "
  * */
-typedef struct{
-	uint16_t data_len;//include '\0'
-	uint8_t *p_data;
-}tuya_ble_network_data_t;
+typedef struct {
+    uint16_t data_len;//include '\0'
+    uint8_t *p_data;
+} tuya_ble_network_data_t;
 
 /*
  * wifi ssid data,unformatted json data,for example " {"wifi_ssid":"tuya","password":"12345678"} "
  * */
-typedef struct{
-	uint16_t data_len;//include '\0'
-	uint8_t *p_data;
-}tuya_ble_wifi_ssid_data_t;
+typedef struct {
+    uint16_t data_len;//include '\0'
+    uint8_t *p_data;
+} tuya_ble_wifi_ssid_data_t;
 
 
 /*
- * uninx timestamp 
+ * uninx timestamp
  * */
-typedef struct{
-	uint8_t timestamp_string[14];
-	int16_t  time_zone;   //actual time zone Multiply by 100.
-}tuya_ble_timestamp_data_t;
+typedef struct {
+    uint8_t timestamp_string[14];
+    int16_t  time_zone;   //actual time zone Multiply by 100.
+} tuya_ble_timestamp_data_t;
 
 
 /*
  * normal time formatted
  * */
-typedef struct{
-	uint16_t nYear;
+typedef struct {
+    uint16_t nYear;
     uint8_t nMonth;
     uint8_t nDay;
     uint8_t nHour;
     uint8_t nMin;
     uint8_t nSec;
     uint8_t DayIndex; /* 0 = Sunday */
-	int16_t time_zone;   //actual time zone Multiply by 100.
-}tuya_ble_time_noraml_data_t;
+    int16_t time_zone;   //actual time zone Multiply by 100.
+} tuya_ble_time_noraml_data_t;
+
+
+/*
+ *
+ * */
+typedef struct {
+    uint8_t status;
+} tuya_ble_dp_data_report_response_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint8_t status;
+} tuya_ble_dp_data_with_time_report_response_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint32_t sn;
+    tuya_ble_dp_data_send_type_t type;
+    tuya_ble_dp_data_send_mode_t mode;
+    tuya_ble_dp_data_send_ack_t ack;
+    uint8_t status;  // 0 - succeed, 1- failed.
+} tuya_ble_dp_data_send_response_data_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint32_t sn;
+    tuya_ble_dp_data_send_type_t type;
+    tuya_ble_dp_data_send_mode_t mode;
+    tuya_ble_dp_data_send_ack_t ack;
+    uint8_t status;
+} tuya_ble_dp_data_with_time_send_response_data_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint8_t data;
+} tuya_ble_unbound_data_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint8_t data;
+} tuya_ble_anomaly_unbound_data_t;
+
+/*
+ *
+ * */
+typedef struct {
+    uint8_t data;
+} tuya_ble_device_reset_data_t;
 
 
 /*
  * 
  * */
-typedef struct{
-	uint8_t status;
-}tuya_ble_dp_data_report_response_t;
-
-/*
- * 
- * */
-typedef struct{
-	uint8_t status;
-}tuya_ble_dp_data_with_time_report_response_t;
-
-
-/*
- * 
- * */
-typedef struct{
-	uint8_t data;
-}tuya_ble_unbound_data_t;
-
-/*
- * 
- * */
-typedef struct{
-	uint8_t data;
-}tuya_ble_anomaly_unbound_data_t;
-
-/*
- * 
- * */
-typedef struct{
-	uint8_t data;
-}tuya_ble_device_reset_data_t;
-
-
-/*
- * network data,unformatted json data,for example " {"wifi_ssid":"tuya","password":"12345678","token":"xxxxxxxxxx"} "
- * */
-typedef struct{
+typedef struct {
     uint8_t login_key_len;
     uint8_t vid_len;
-	uint8_t login_key[LOGIN_KEY_LEN];
-	uint8_t vid[DEVICE_VIRTUAL_ID_LEN];
-}tuya_ble_login_key_vid_data_t;
+    uint8_t beacon_key_len;
+    uint8_t login_key[LOGIN_KEY_LEN];
+    uint8_t vid[DEVICE_VIRTUAL_ID_LEN];
+    uint8_t beacon_key[BEACON_KEY_LEN];
+} tuya_ble_login_key_vid_data_t;
 
 
+typedef enum {
+    RESET_TYPE_UNBIND,
+    RESET_TYPE_FACTORY_RESET,
+}tuya_ble_reset_type_t;
+    
+
+/*
+ *
+ * */
+typedef struct {
+    tuya_ble_reset_type_t type;
+    uint8_t status;     //0-succeed,1-failed.
+} tuya_ble_unbind_reset_response_data_t;
 
 /*
  * tuya ble sdk callback parameters union
  * */
 typedef struct {
-	tuya_ble_cb_evt_t evt;
-	union {
-		tuya_ble_connect_status_t connect_status;
-		tuya_ble_dp_write_data_t  dp_write_data;
-		tuya_ble_dp_query_data_t  dp_query_data;
-		tuya_ble_ota_data_t       ota_data;
-		tuya_ble_network_data_t   network_data;
-		tuya_ble_wifi_ssid_data_t wifi_info_data;
-		tuya_ble_timestamp_data_t timestamp_data;
-		tuya_ble_time_noraml_data_t time_normal_data;
+    tuya_ble_cb_evt_t evt;
+    union {
+        tuya_ble_connect_status_t connect_status;
+        tuya_ble_dp_write_data_t  dp_write_data;
+        tuya_ble_dp_query_data_t  dp_query_data;
+        tuya_ble_dp_data_received_data_t dp_received_data;
+        tuya_ble_ota_data_t       ota_data;
+        tuya_ble_network_data_t   network_data;
+        tuya_ble_wifi_ssid_data_t wifi_info_data;
+        tuya_ble_timestamp_data_t timestamp_data;
+        tuya_ble_time_noraml_data_t time_normal_data;
         tuya_ble_passthrough_data_t ble_passthrough_data;
         tuya_ble_dp_data_report_response_t dp_response_data;
         tuya_ble_dp_data_with_time_report_response_t dp_with_time_response_data;
+        tuya_ble_dp_data_send_response_data_t dp_send_response_data;
+        tuya_ble_dp_data_with_time_send_response_data_t dp_with_time_send_response_data;
         tuya_ble_unbound_data_t unbound_data;
         tuya_ble_anomaly_unbound_data_t anomaly_unbound_data;
         tuya_ble_device_reset_data_t device_reset_data;
         tuya_ble_login_key_vid_data_t device_login_key_vid_data;
-	};
+        tuya_ble_unbind_reset_response_data_t reset_response_data;
+    };
 } tuya_ble_cb_evt_param_t;
 
 
@@ -637,54 +757,56 @@ typedef void (*tuya_ble_callback_t)(tuya_ble_cb_evt_param_t* param);
 
 typedef struct
 {
-      uint32_t  crc;
-	  uint32_t  settings_version;
-	  uint8_t   h_id[H_ID_LEN];
-	  uint8_t   device_id[DEVICE_ID_LEN];
-	  uint8_t   mac[MAC_LEN];
-	  uint8_t   auth_key[AUTH_KEY_LEN];
-      uint8_t   mac_string[MAC_LEN*2];
-	  uint8_t  res[128];
-}tuya_ble_auth_settings_t;   
+    uint32_t  crc;
+    uint32_t  settings_version;
+    uint8_t   h_id[H_ID_LEN];
+    uint8_t   device_id[DEVICE_ID_LEN];
+    uint8_t   mac[MAC_LEN];
+    uint8_t   auth_key[AUTH_KEY_LEN];
+    uint8_t   mac_string[MAC_LEN*2];
+    uint8_t  res[128];
+} tuya_ble_auth_settings_t;
 
 
 typedef struct
 {
-      uint32_t  crc;
-	  uint32_t  settings_version;
-      tuya_ble_product_id_type_t pid_type;
-      uint8_t   pid_len;
-	  uint8_t   common_pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
-	  uint8_t   login_key[LOGIN_KEY_LEN];
-      uint8_t   ecc_secret_key[ECC_SECRET_KEY_LEN];
-      uint8_t   device_virtual_id[DEVICE_VIRTUAL_ID_LEN];
-      uint8_t   user_rand[PAIR_RANDOM_LEN];
-	  uint8_t   bound_flag;
-      uint8_t   factory_test_flag;
-      uint8_t  res[127];
-}tuya_ble_sys_settings_t; 
+    uint32_t  crc;
+    uint32_t  settings_version;                      //
+    tuya_ble_product_id_type_t pid_type;
+    uint8_t   pid_len;
+    uint8_t   common_pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
+    uint8_t   login_key[LOGIN_KEY_LEN];
+    uint8_t   ecc_secret_key[ECC_SECRET_KEY_LEN];
+    uint8_t   device_virtual_id[DEVICE_VIRTUAL_ID_LEN];
+    uint8_t   user_rand[PAIR_RANDOM_LEN];
+    uint8_t   bound_flag;
+    uint8_t   factory_test_flag;
+    uint8_t   server_cert_pub_key[64];
+    uint8_t   beacon_key[BEACON_KEY_LEN]; // The settings_version number does not need to be upgraded, because the old equipment is not supported to upgrade to support the beacon key.
+    uint8_t   res[47];
+} tuya_ble_sys_settings_t;
 
 
 typedef struct
 {
-	tuya_ble_auth_settings_t auth_settings;
-	tuya_ble_sys_settings_t  sys_settings;
+    tuya_ble_auth_settings_t auth_settings;
+    tuya_ble_sys_settings_t  sys_settings;
     tuya_ble_product_id_type_t pid_type;
     uint8_t pid_len;
-	uint8_t pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
-}tuya_ble_parameters_settings_t;
+    uint8_t pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
+} tuya_ble_parameters_settings_t;
 
 
 typedef struct
 {
-      tuya_ble_product_id_type_t pid_type;
-      uint8_t   pid_len;
-	  uint8_t   pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
-	  uint8_t   h_id[H_ID_LEN];
-	  uint8_t   device_id[DEVICE_ID_LEN];
-	  uint8_t   mac[MAC_LEN];
-	  uint8_t   auth_key[AUTH_KEY_LEN];
-}tuya_ble_factory_id_data_t;  
+    tuya_ble_product_id_type_t pid_type;
+    uint8_t   pid_len;
+    uint8_t   pid[TUYA_BLE_PRODUCT_ID_MAX_LEN];
+    uint8_t   h_id[H_ID_LEN];
+    uint8_t   device_id[DEVICE_ID_LEN];
+    uint8_t   mac[MAC_LEN];
+    uint8_t   auth_key[AUTH_KEY_LEN];
+} tuya_ble_factory_id_data_t;
 
 
 #endif

@@ -84,6 +84,8 @@ extern "C" {
 
 #define FRM_DATA_PASSTHROUGH_REQ   0x0023 //APP<->BLE
 
+#define FRM_DP_DATA_WRITE_REQ       0x0027     //APP->BLE
+#define FRM_DP_DATA_WRITE_RESP      0x0027     //BLE->APP
 
 #define FRM_STAT_REPORT         0x8001  //BLE->APP
 #define FRM_STAT_REPORT_RESP    0x8001  //APP->BLE
@@ -91,11 +93,11 @@ extern "C" {
 #define FRM_STAT_WITH_TIME_REPORT    0x8003  //BLE->APP
 #define FRM_STAT_WITH_TIME_REPORT_RESP      0x8003  //APP->BLE
 
-#define FRM_BULKDATA_START_RESP                 0x8007  //BLE->APP
-#define FRM_BULKDATA_START                      0x8008  //BLE->APP
-#define FRM_BULKDATA_DATA_SEND_REQ              0x8009  //BLE->APP
-#define FRM_BULKDATA_DATA_SEND_END_REQ          0x800A  //BLE->APP
-#define FRM_BULKDATA_DATA_SEND_FORCED_END_RESP  0x800B  //BLE->APP
+#define FRM_DP_DATA_SEND_REQ                            0x8006  //BLE->APP
+#define FRM_DP_DATA_SEND_RESP                           0x8006  //APP->BLE
+
+#define FRM_DP_DATA_WITH_TIME_SEND_REQ                  0x8007  //BLE->APP
+#define FRM_DP_DATA_WITH_TIME_SEND_RESP                 0x8007  //APP->BLE
  
 #define FRM_GET_UNIX_TIME_MS_REQ           0x8010  //BLE->APP
 #define FRM_GET_UNIX_TIME_MS_RESP          0x8010  //APP->BLE

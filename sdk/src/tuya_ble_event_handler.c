@@ -41,6 +41,7 @@
 #include "tuya_ble_event_handler.h"
 
 
+
 void tuya_ble_handle_device_info_update_evt(tuya_ble_evt_param_t *evt)
 {
 
@@ -257,9 +258,117 @@ void tuya_ble_handle_dp_data_with_time_string_reported_evt(tuya_ble_evt_param_t 
     }
 }
 
+
+void tuya_ble_handle_dp_data_send_evt(tuya_ble_evt_param_t *evt)
+{
+    uint8_t encry_mode = 0;
+    if(tuya_ble_pair_rand_valid_get()==1)
+    {
+        encry_mode = ENCRYPTION_MODE_SESSION_KEY;
+    }
+    else
+    {
+        encry_mode = ENCRYPTION_MODE_KEY_4;
+    }
+
+    tuya_ble_commData_send(FRM_DP_DATA_SEND_REQ,0,evt->dp_send_data.p_data,evt->dp_send_data.data_len,encry_mode);
+
+    if(evt->dp_send_data.p_data)
+    {
+        tuya_ble_free(evt->dp_send_data.p_data);
+    }
+}
+
+void tuya_ble_handle_dp_data_with_time_send_evt(tuya_ble_evt_param_t *evt)
+{
+    uint8_t encry_mode = 0;
+    if(tuya_ble_pair_rand_valid_get()==1)
+    {
+        encry_mode = ENCRYPTION_MODE_SESSION_KEY;
+    }
+    else
+    {
+        encry_mode = ENCRYPTION_MODE_KEY_4;
+    }
+
+    tuya_ble_commData_send(FRM_DP_DATA_WITH_TIME_SEND_REQ,0,evt->dp_with_time_send_data.p_data,evt->dp_with_time_send_data.data_len,encry_mode);
+
+    if(evt->dp_with_time_send_data.p_data)
+    {
+        tuya_ble_free(evt->dp_with_time_send_data.p_data);
+    }
+}
+
+
+static void tuya_ble_handle_device_unbind_evt_completed(void *p_param,tuya_ble_status_t result)
+{
+    tuya_ble_evt_param_t event;
+
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        event.hdr.event = TUYA_BLE_EVT_SAVE_SYS_SETTINGS_DATA_CALLBACK;
+        event.sys_settings_save_callback_data.type = 4;
+        event.sys_settings_save_callback_data.status = result;
+
+        if(tuya_ble_event_send(&event)!=0)
+        {
+            TUYA_BLE_LOG_ERROR("tuya_ble_handle_device_unbind_evt_completed event Send failed.");
+        }
+    }
+    else  //Impossible to be busy
+    {
+        tuya_ble_device_reset();  //must be reset!
+    }
+}
+
+void tuya_ble_handle_device_unbind_evt(tuya_ble_evt_param_t *evt)
+{
+    tuya_ble_cb_evt_param_t event;
+
+    if(tuya_ble_get_storage_save_sys_settings_flag()==1)  //busy
+    {
+        TUYA_BLE_LOG_ERROR("tuya_ble_handle_device_unbind_evt->busy.");
+        
+        event.evt = TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE;
+        event.reset_response_data.type = RESET_TYPE_UNBIND;
+        event.reset_response_data.status = 1;
+
+        if(tuya_ble_cb_event_send(&event)!=0)
+        {
+            TUYA_BLE_LOG_ERROR("tuya_ble_handle_device_unbind_evt-tuya ble send cb event (TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE) failed.");
+        }
+        else
+        {
+
+        }
+    }
+    else
+    {
+        memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+        memset(tuya_ble_current_para.sys_settings.beacon_key,0,BEACON_KEY_LEN);
+        tuya_ble_current_para.sys_settings.bound_flag= 0;
+
+        tuya_ble_storage_save_sys_settings_async(tuya_ble_handle_device_unbind_evt_completed);
+    }
+}
+
+
 static void tuya_ble_handle_factory_reset_evt_completed(void *p_param,tuya_ble_status_t result)
 {
-    if(result!=TUYA_BLE_SUCCESS)
+    tuya_ble_evt_param_t event;
+
+    if(result==TUYA_BLE_SUCCESS)
+    {
+        event.hdr.event = TUYA_BLE_EVT_SAVE_SYS_SETTINGS_DATA_CALLBACK;
+        event.sys_settings_save_callback_data.type = 5;
+        event.sys_settings_save_callback_data.status = result;
+
+        if(tuya_ble_event_send(&event)!=0)
+        {
+            TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt_completed event Send failed.");
+        }
+    }
+    else  //Impossible to be busy
     {
         tuya_ble_device_reset();  //must be reset!
     }
@@ -269,29 +378,32 @@ void tuya_ble_handle_factory_reset_evt(tuya_ble_evt_param_t *evt)
 {
     tuya_ble_cb_evt_param_t event;
 
-    memset(tuya_ble_current_para.sys_settings.device_virtual_id,0,DEVICE_VIRTUAL_ID_LEN);
-    tuya_ble_gap_disconnect();
-    memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
-    tuya_ble_current_para.sys_settings.bound_flag= 0;
-    tuya_ble_adv_change();
-    tuya_ble_connect_status_set(UNBONDING_UNCONN);
-    TUYA_BLE_LOG_INFO("tuya_ble_handle_factory_reset_evt - current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
-
-
-    event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
-    event.connect_status = tuya_ble_connect_status_get();
-
-    if(tuya_ble_cb_event_send(&event)!=0)
+    if(tuya_ble_get_storage_save_sys_settings_flag()==1)  //busy
     {
-        TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt-tuya ble send cb event (connect status update) failed.");
+        TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt->busy.");
+        
+        event.evt = TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE;
+        event.reset_response_data.type = RESET_TYPE_FACTORY_RESET;
+        event.reset_response_data.status = 1;
+
+        if(tuya_ble_cb_event_send(&event)!=0)
+        {
+            TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt-tuya ble send cb event (TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE) failed.");
+        }
+        else
+        {
+
+        }
     }
     else
     {
+        memset(tuya_ble_current_para.sys_settings.device_virtual_id,0,DEVICE_VIRTUAL_ID_LEN);
+        memset(tuya_ble_current_para.sys_settings.login_key,0,LOGIN_KEY_LEN);
+        memset(tuya_ble_current_para.sys_settings.beacon_key,0,BEACON_KEY_LEN);
+        tuya_ble_current_para.sys_settings.bound_flag= 0;
 
+        tuya_ble_storage_save_sys_settings_async(tuya_ble_handle_factory_reset_evt_completed);
     }
-
-    tuya_ble_storage_save_sys_settings_async(tuya_ble_handle_factory_reset_evt_completed);
-
 }
 
 
@@ -586,6 +698,7 @@ void tuya_ble_handle_save_sys_settings_callback_evt(tuya_ble_evt_param_t *evt)
     uint8_t temp = 0;
     uint8_t encry_mode = 0;
     uint32_t ack_sn = 0;
+    tuya_ble_connect_status_t current_connect_status;
 
     switch(evt->sys_settings_save_callback_data.type)
     {
@@ -599,15 +712,39 @@ void tuya_ble_handle_save_sys_settings_callback_evt(tuya_ble_evt_param_t *evt)
 
             tuya_ble_connect_status_set(BONDING_CONN);
 
+            event.evt = TUYA_BLE_CB_EVT_UPDATE_LOGIN_KEY_VID;
+            event.device_login_key_vid_data.login_key_len = LOGIN_KEY_LEN;
+            event.device_login_key_vid_data.vid_len = DEVICE_VIRTUAL_ID_LEN;
+            
+            #if ((TUYA_BLE_PROTOCOL_VERSION_HIGN>=4)&&(TUYA_BLE_PROTOCOL_VERSION_LOW>=1))
+            if(TUYA_BLE_BEACON_KEY_ENABLE)
+            {
+                event.device_login_key_vid_data.beacon_key_len = BEACON_KEY_LEN;
+                memcpy( event.device_login_key_vid_data.beacon_key,tuya_ble_current_para.sys_settings.beacon_key,BEACON_KEY_LEN);
+            }
+            #endif
+            
+            memcpy( event.device_login_key_vid_data.login_key,tuya_ble_current_para.sys_settings.login_key,LOGIN_KEY_LEN);
+            memcpy( event.device_login_key_vid_data.vid,tuya_ble_current_para.sys_settings.device_virtual_id,DEVICE_VIRTUAL_ID_LEN);
+            
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed[TUYA_BLE_CB_EVT_UPDATE_LOGIN_KEY_VID].");
+            }
+            else
+            {
+                TUYA_BLE_LOG_DEBUG("tuya ble send cb event succeed[TUYA_BLE_CB_EVT_UPDATE_LOGIN_KEY_VID].");
+            }
+            
             event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
             event.connect_status = tuya_ble_connect_status_get();
             if(tuya_ble_cb_event_send(&event)!=0)
             {
-                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed.");
+                TUYA_BLE_LOG_ERROR("tuya ble send cb event failed[TUYA_BLE_CB_EVT_CONNECTE_STATUS].");
             }
             else
             {
-                TUYA_BLE_LOG_INFO("tuya ble send cb event succeed.");
+                TUYA_BLE_LOG_INFO("tuya ble send cb event succeed[TUYA_BLE_CB_EVT_CONNECTE_STATUS].");
             }
 
             encry_mode = ENCRYPTION_MODE_SESSION_KEY;
@@ -629,7 +766,86 @@ void tuya_ble_handle_save_sys_settings_callback_evt(tuya_ble_evt_param_t *evt)
         }
 
         break;
+    case 4:
+        if(evt->sys_settings_save_callback_data.status==TUYA_BLE_SUCCESS)
+        {
+            current_connect_status = tuya_ble_connect_status_get();
+            if((current_connect_status<UNKNOW_STATUS)&&(current_connect_status!=UNBONDING_UNCONN)&&(current_connect_status!=BONDING_UNCONN))
+            {
+                tuya_ble_gap_disconnect();
+            }
+            tuya_ble_adv_change();
+            tuya_ble_connect_status_set(UNBONDING_UNCONN);
+                        
+            TUYA_BLE_LOG_INFO("tuya_ble_handle_device_unbind_evt - current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
 
+            event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
+            event.connect_status = tuya_ble_connect_status_get();
+
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya_ble_handle_device_unbind_evt-tuya ble send cb event (connect status update) failed.");
+            }
+            else
+            {
+
+            }
+
+            event.evt = TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE;
+            event.reset_response_data.type = RESET_TYPE_UNBIND;
+            event.reset_response_data.status = 0;
+
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya_ble_handle_device_unbind_evt-tuya ble send cb event (TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE) failed.");
+            }
+            else
+            {
+
+            }
+
+        }
+        break;
+    case 5:
+        if(evt->sys_settings_save_callback_data.status==TUYA_BLE_SUCCESS)
+        {
+            current_connect_status = tuya_ble_connect_status_get();
+            if((current_connect_status<UNKNOW_STATUS)&&(current_connect_status!=UNBONDING_UNCONN)&&(current_connect_status!=BONDING_UNCONN))
+            {
+                tuya_ble_gap_disconnect();
+            }
+            tuya_ble_adv_change();
+            tuya_ble_connect_status_set(UNBONDING_UNCONN);
+                        
+            TUYA_BLE_LOG_INFO("tuya_ble_handle_factory_reset_evt - current bound flag = %d",tuya_ble_current_para.sys_settings.bound_flag);
+
+            event.evt = TUYA_BLE_CB_EVT_CONNECTE_STATUS;
+            event.connect_status = tuya_ble_connect_status_get();
+
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt-tuya ble send cb event (connect status update) failed.");
+            }
+            else
+            {
+
+            }
+
+            event.evt = TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE;
+            event.reset_response_data.type = RESET_TYPE_FACTORY_RESET;
+            event.reset_response_data.status = 0;
+
+            if(tuya_ble_cb_event_send(&event)!=0)
+            {
+                TUYA_BLE_LOG_ERROR("tuya_ble_handle_factory_reset_evt-tuya ble send cb event (TUYA_BLE_CB_EVT_UNBIND_RESET_RESPONSE) failed.");
+            }
+            else
+            {
+
+            }
+
+        }
+        break;
     default:
         break;
     };
@@ -708,6 +924,10 @@ void tuya_ble_handle_connect_change_evt(tuya_ble_evt_param_t *evt)
 void tuya_ble_handle_ble_data_evt(uint8_t *buf,uint16_t len)
 {
     tuya_ble_commonData_rx_proc(buf,len);
+    if(len>20)
+    {
+        tuya_ble_free(buf);
+    }
 }
 
 

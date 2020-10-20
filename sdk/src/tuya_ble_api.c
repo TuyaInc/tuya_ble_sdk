@@ -151,6 +151,8 @@ uint16_t tuya_ble_scheduler_queue_events_get(void)
 tuya_ble_status_t tuya_ble_gatt_receive_data(uint8_t *p_data,uint16_t len)
 {
     tuya_ble_evt_param_t event;
+    
+    memset(&event,0,sizeof(tuya_ble_evt_param_t));
 
     event.hdr.event = TUYA_BLE_EVT_MTU_DATA_RECEIVE;
 
@@ -162,7 +164,20 @@ tuya_ble_status_t tuya_ble_gatt_receive_data(uint8_t *p_data,uint16_t len)
     {
         event.mtu_data.len = len;
     }
-    memcpy(event.mtu_data.data,p_data,event.mtu_data.len);
+    if(event.mtu_data.len<=20)
+    {
+        memcpy(event.mtu_data.data,p_data,event.mtu_data.len);
+    }
+    else
+    {
+        event.mtu_data.p_data =(uint8_t *)tuya_ble_malloc(event.mtu_data.len);
+        if(event.mtu_data.p_data==NULL)
+        {
+            return TUYA_BLE_ERR_NO_MEM;
+        }
+        memcpy(event.mtu_data.p_data,p_data,event.mtu_data.len);        
+    }
+    
     if(tuya_ble_event_send(&event)!=0)
     {
         TUYA_BLE_LOG_ERROR("tuya_event_send ble data error,data len = %d ", event.mtu_data.len);
@@ -461,6 +476,39 @@ tuya_ble_status_t tuya_ble_device_update_login_key(uint8_t* p_buf, uint8_t len)
     return TUYA_BLE_SUCCESS;
 }
 
+#if ((TUYA_BLE_PROTOCOL_VERSION_HIGN==4) && (TUYA_BLE_BEACON_KEY_ENABLE))
+/**
+ *@brief
+ *@param
+ *
+ *@note
+ *
+ * */
+tuya_ble_status_t tuya_ble_device_update_beacon_key(uint8_t* p_buf, uint8_t len)
+{
+    tuya_ble_evt_param_t event;
+
+    event.hdr.event = TUYA_BLE_EVT_DEVICE_INFO_UPDATE;
+
+    event.device_info_data.type = DEVICE_INFO_TYPE_BEACON_KEY;
+
+    if(len<BEACON_KEY_LEN)
+    {
+        return TUYA_BLE_ERR_INVALID_PARAM;
+    }
+    event.device_info_data.len = BEACON_KEY_LEN;
+    memcpy(event.device_info_data.data,p_buf,BEACON_KEY_LEN);
+    if(tuya_ble_event_send(&event)!=0)
+    {
+        TUYA_BLE_LOG_ERROR("tuya_event_send BEACON KEY update error");
+        return TUYA_BLE_ERR_INTERNAL;
+    }
+
+    return TUYA_BLE_SUCCESS;
+}
+
+#endif
+
 /**
  *@brief
  *@param
@@ -504,6 +552,184 @@ tuya_ble_status_t tuya_ble_device_update_bound_state(uint8_t state)
     return TUYA_BLE_SUCCESS;
 }
 
+#if (TUYA_BLE_PROTOCOL_VERSION_HIGN==4) 
+
+/*
+ *@brief
+ *@param
+ *
+ *@note
+ *
+ * */
+tuya_ble_status_t tuya_ble_dp_data_send(uint32_t sn,tuya_ble_dp_data_send_type_t type,tuya_ble_dp_data_send_mode_t mode,tuya_ble_dp_data_send_ack_t ack,uint8_t *p_dp_data,uint32_t dp_data_len)
+{
+    tuya_ble_evt_param_t evt;
+    uint8_t *ble_evt_buffer = NULL;
+    mtp_ret ret;
+    klv_node_s *list = NULL;
+
+    if(tuya_ble_connect_status_get()!=BONDING_CONN)
+    {
+        return TUYA_BLE_ERR_INVALID_STATE;
+    }
+
+    if((dp_data_len>(TUYA_BLE_SEND_MAX_DATA_LEN-7))||(dp_data_len==0))
+    {
+		TUYA_BLE_LOG_ERROR("send dp data len error,data len = %d , max data len = %d",dp_data_len,TUYA_BLE_SEND_MAX_DATA_LEN-7);
+        return TUYA_BLE_ERR_INVALID_LENGTH;
+    }
+    ret = data_2_klvlist(p_dp_data,dp_data_len,&list,1);
+    if(MTP_OK != ret)
+    {
+        return TUYA_BLE_ERR_INVALID_PARAM;
+    }
+    free_klv_list(list);
+
+    ble_evt_buffer=(uint8_t *)tuya_ble_malloc(dp_data_len+7);
+    if(ble_evt_buffer==NULL)
+    {
+        return TUYA_BLE_ERR_NO_MEM;
+    }
+    else
+    {
+        ble_evt_buffer[0] = TUYA_BLE_DP_WRITE_CURRENT_VERSION;
+        ble_evt_buffer[1] = sn>>24;
+        ble_evt_buffer[2] = sn>>16;
+        ble_evt_buffer[3] = sn>>8;
+        ble_evt_buffer[4] = sn;
+        switch(type)
+        {
+            case DP_SEND_TYPE_ACTIVE:
+                ble_evt_buffer[5] = 0;
+            break;
+            case DP_SEND_TYPE_PASSIVE:
+                ble_evt_buffer[5] = 1;
+            break;
+            default:
+                ble_evt_buffer[5] = 0; 
+            break;
+            
+        };
+        if(ack == DP_SEND_WITHOUT_RESPONSE)
+        {
+            ble_evt_buffer[5] |= 0x80;
+        }
+        ble_evt_buffer[6] = mode;
+        memcpy(ble_evt_buffer+7,p_dp_data,dp_data_len);
+    }
+
+    evt.hdr.event = TUYA_BLE_EVT_DP_DATA_SEND;
+    evt.dp_send_data.sn = sn;
+    evt.dp_send_data.type = type;
+    evt.dp_send_data.mode = mode;
+    evt.dp_send_data.ack = ack;
+    evt.dp_send_data.p_data = ble_evt_buffer;
+    evt.dp_send_data.data_len = dp_data_len+7;
+
+    if(tuya_ble_event_send(&evt)!=0)
+    {
+        tuya_ble_free(ble_evt_buffer);
+        return TUYA_BLE_ERR_NO_EVENT;
+    }
+
+    return TUYA_BLE_SUCCESS;
+}
+
+
+/*
+ *@brief
+ *@param
+ *
+ *@note
+ *
+ * */
+tuya_ble_status_t tuya_ble_dp_data_with_time_send(uint32_t sn,tuya_ble_dp_data_send_mode_t mode,tuya_ble_dp_data_send_time_type_t time_type,uint8_t *p_time_data,uint8_t *p_dp_data,uint32_t dp_data_len)
+{
+    tuya_ble_evt_param_t evt;
+    uint8_t *ble_evt_buffer=NULL;
+    mtp_ret ret;
+    klv_node_s *list = NULL;
+    uint16_t buffer_len = 0;
+
+    if(tuya_ble_connect_status_get()!=BONDING_CONN)
+    {
+        return TUYA_BLE_ERR_INVALID_STATE;
+    }
+
+    if((dp_data_len>(TUYA_BLE_SEND_MAX_DATA_LEN-7-14))||(dp_data_len==0))
+    {
+        return TUYA_BLE_ERR_INVALID_LENGTH;
+    }
+    ret = data_2_klvlist(p_dp_data,dp_data_len,&list,1);
+    if(MTP_OK != ret)
+    {
+        return TUYA_BLE_ERR_INVALID_PARAM;
+    }
+    free_klv_list(list);
+    
+    if(time_type==DP_TIME_TYPE_UNIX_TIMESTAMP)
+    {
+        buffer_len = dp_data_len + 12;
+    }
+    else if(time_type==DP_TIME_TYPE_MS_STRING)
+    {
+        buffer_len = dp_data_len + 21;
+    }
+    else
+    {
+        return TUYA_BLE_ERR_INVALID_PARAM;
+    }
+    
+    ble_evt_buffer=(uint8_t *)tuya_ble_malloc(buffer_len);
+    
+    if(ble_evt_buffer==NULL)
+    {
+        return TUYA_BLE_ERR_NO_MEM;
+    }
+    else
+    {   
+        ble_evt_buffer[0] = TUYA_BLE_DP_WRITE_CURRENT_VERSION;
+        ble_evt_buffer[1] = sn>>24;
+        ble_evt_buffer[2] = sn>>16;
+        ble_evt_buffer[3] = sn>>8;
+        ble_evt_buffer[4] = sn;
+        ble_evt_buffer[5] = 0;    //must 0 - WITH RESPONSE
+                
+        ble_evt_buffer[6] = mode;
+        ble_evt_buffer[7] = time_type;
+        
+        if(time_type==DP_TIME_TYPE_UNIX_TIMESTAMP)
+        {
+            memcpy(&ble_evt_buffer[8],p_time_data,4);
+            memcpy(ble_evt_buffer+12,p_dp_data,dp_data_len);
+        }
+        else
+        {
+            memcpy(&ble_evt_buffer[8],p_time_data,13);
+            memcpy(ble_evt_buffer+21,p_dp_data,dp_data_len);
+        }
+     
+        
+    }
+
+    evt.hdr.event = TUYA_BLE_EVT_DP_DATA_WITH_TIME_SEND;
+    evt.dp_with_time_send_data.sn = sn;
+    evt.dp_with_time_send_data.type = DP_SEND_TYPE_ACTIVE;
+    evt.dp_with_time_send_data.mode = mode;
+    evt.dp_with_time_send_data.ack = DP_SEND_WITH_RESPONSE;
+    evt.dp_with_time_send_data.p_data = ble_evt_buffer;
+    evt.dp_with_time_send_data.data_len = buffer_len;
+
+    if(tuya_ble_event_send(&evt)!=0)
+    {
+        tuya_ble_free(ble_evt_buffer);
+        return TUYA_BLE_ERR_NO_EVENT;
+    }
+
+    return TUYA_BLE_SUCCESS;
+}
+
+#else
 
 /**
  *@brief
@@ -524,9 +750,9 @@ tuya_ble_status_t tuya_ble_dp_data_report(uint8_t *p_data,uint32_t len)
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if((len>TUYA_BLE_REPORT_MAX_DP_DATA_LEN)||(len==0))
+    if((len>TUYA_BLE_SEND_MAX_DATA_LEN)||(len==0))
     {
-        TUYA_BLE_LOG_ERROR("report dp data len error,data len = %d , max data len = %d",len,TUYA_BLE_REPORT_MAX_DP_DATA_LEN);
+        TUYA_BLE_LOG_ERROR("report dp data len error,data len = %d , max data len = %d",len,TUYA_BLE_SEND_MAX_DATA_LEN);
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
     ret = data_2_klvlist(p_data,len,&list,0);
@@ -579,7 +805,7 @@ tuya_ble_status_t tuya_ble_dp_data_with_time_report(uint32_t timestamp,uint8_t *
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if((len>TUYA_BLE_REPORT_MAX_DP_DATA_LEN)||(len==0))
+    if((len>(TUYA_BLE_SEND_MAX_DATA_LEN-5))||(len==0))
     {
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
@@ -634,7 +860,7 @@ tuya_ble_status_t tuya_ble_dp_data_with_time_ms_string_report(uint8_t *time_stri
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if((len>TUYA_BLE_REPORT_MAX_DP_DATA_LEN)||(len==0))
+    if((len>(TUYA_BLE_SEND_MAX_DATA_LEN-14))||(len==0))
     {
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
@@ -668,7 +894,7 @@ tuya_ble_status_t tuya_ble_dp_data_with_time_ms_string_report(uint8_t *time_stri
     return TUYA_BLE_SUCCESS;
 }
 
-
+#endif
 
 /**
  * @brief   Function for data passthrough.
@@ -686,7 +912,7 @@ tuya_ble_status_t tuya_ble_data_passthrough(uint8_t *p_data,uint32_t len)
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if(len>TUYA_BLE_TRANSMISSION_MAX_DATA_LEN)
+    if(len>TUYA_BLE_SEND_MAX_DATA_LEN)
     {
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
@@ -731,7 +957,7 @@ tuya_ble_status_t tuya_ble_production_test_asynchronous_response(uint8_t channel
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if(len>TUYA_BLE_TRANSMISSION_MAX_DATA_LEN)
+    if(len>TUYA_BLE_SEND_MAX_DATA_LEN)
     {
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
@@ -875,6 +1101,31 @@ tuya_ble_status_t tuya_ble_device_reset_response(uint8_t result_code)
 
 #endif
 
+
+/**
+ *@brief
+ *@param
+ *
+ *@note
+ *
+ * */
+
+tuya_ble_status_t tuya_ble_device_unbind(void)
+{
+    tuya_ble_evt_param_t event;
+
+    event.hdr.event = TUYA_BLE_EVT_DEVICE_UNBIND;
+    event.device_unbind_data.reserve = 0;
+    
+    if(tuya_ble_event_send(&event)!=0)
+    {
+        TUYA_BLE_LOG_ERROR("tuya_event_send device unbind error");
+        return TUYA_BLE_ERR_INTERNAL;
+    }
+
+    return TUYA_BLE_SUCCESS;
+}
+
 /**
  *@brief
  *@param
@@ -946,7 +1197,7 @@ tuya_ble_status_t tuya_ble_ota_response(tuya_ble_ota_response_t *p_data)
         return TUYA_BLE_ERR_INVALID_STATE;
     }
 
-    if(p_data->data_len>TUYA_BLE_TRANSMISSION_MAX_DATA_LEN)
+    if(p_data->data_len>TUYA_BLE_SEND_MAX_DATA_LEN)
     {
         return TUYA_BLE_ERR_INVALID_LENGTH;
     }
@@ -1101,7 +1352,7 @@ void tuya_ble_disconnected_handler(void)
  *@param
  *
  *@note
- * Initialization exampleï¼
+ * Initialization example
  *@example
 
  *@code
@@ -1190,6 +1441,11 @@ static void tuya_ble_storage_init_async_completed(void *p_param,tuya_ble_status_
         if(tuya_ble_current_para.sys_settings.bound_flag)
         {
             memcpy(tuya_ble_current_para.sys_settings.login_key,param_data->login_key,LOGIN_KEY_LEN);
+            
+            #if #if ((TUYA_BLE_PROTOCOL_VERSION_HIGN==4) && (TUYA_BLE_BEACON_KEY_ENABLE))       
+            memcpy(tuya_ble_current_para.sys_settings.beacon_key,param_data->beacon_key,BEACON_KEY_LEN);        
+            #endif
+            
         }
 
 #else

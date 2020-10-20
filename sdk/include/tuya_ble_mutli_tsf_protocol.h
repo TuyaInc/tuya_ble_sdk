@@ -59,7 +59,7 @@ typedef uint8_t frame_seq_t;
 #define FRAME_SEQ_LMT 16
 
 // frame subpackage len
-typedef uint8_t frame_subpkg_len_t;
+typedef uint16_t frame_subpkg_len_t;
 
 // frame package description
 typedef uint8_t frm_pkg_desc_t;
@@ -139,7 +139,7 @@ typedef struct s_klv_node {
 ***********************************************************/
 __MUTLI_TSF_PROTOCOL_EXT \
 klv_node_s *make_klv_list(klv_node_s *list,uint8_t id,dp_type type,\
-                          void *data,uint8_t len);
+                          void *data,uint16_t len);
 
 /***********************************************************
 *  Function: free_klv_list
@@ -271,6 +271,23 @@ __MUTLI_TSF_PROTOCOL_EXT \
 mtp_ret trsmitr_send_pkg_encode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t version, uint8_t *buf, uint32_t len);
 
 /***********************************************************
+*  Function: trsmitr_send_pkg_encode_with_packet_length
+*  description: Encoding function for specifying sub-packet length
+*              
+*               
+*               
+*  Input:
+*  Output:
+*  Return: MTP_OK->buf send up
+*          MTP_TRSMITR_CONTINUE->need call again to be continue
+*          other->error
+*  Note: could get from encode data len and encode data by calling method
+         get_trsmitr_subpkg_len() and get_trsmitr_subpkg()
+***********************************************************/
+__MUTLI_TSF_PROTOCOL_EXT \
+mtp_ret trsmitr_send_pkg_encode_with_packet_length(frm_trsmitr_proc_s *frm_trsmitr,uint32_t pkg_len_max, uint8_t version, uint8_t *buf, uint32_t len);
+
+/***********************************************************
 *  Function: trsmitr_recv_pkg_decode
 *  description: frm_trsmitr->transmitter handle
 *               raw_data->raw encode data
@@ -284,7 +301,7 @@ mtp_ret trsmitr_send_pkg_encode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t version
          get_trsmitr_subpkg_len() and get_trsmitr_subpkg()
 ***********************************************************/
 __MUTLI_TSF_PROTOCOL_EXT \
-mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_data, uint8_t raw_data_len);
+mtp_ret trsmitr_recv_pkg_decode(frm_trsmitr_proc_s *frm_trsmitr, uint8_t *raw_data, uint16_t raw_data_len);
 
 
 #ifdef __cplusplus

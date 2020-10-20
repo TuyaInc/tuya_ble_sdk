@@ -80,6 +80,10 @@ tuya_ble_status_t tuya_ble_device_update_product_id(tuya_ble_product_id_type_t t
 
 tuya_ble_status_t tuya_ble_device_update_login_key(uint8_t* p_buf, uint8_t len);
 
+#if ((TUYA_BLE_PROTOCOL_VERSION_HIGN==4) && (TUYA_BLE_BEACON_KEY_ENABLE))
+tuya_ble_status_t tuya_ble_device_update_beacon_key(uint8_t* p_buf, uint8_t len);
+#endif
+
 tuya_ble_status_t tuya_ble_device_update_bound_state(uint8_t state);
 
 tuya_ble_status_t tuya_ble_device_update_mcu_version(uint32_t mcu_firmware_version, uint32_t mcu_hardware_version);
@@ -93,6 +97,45 @@ tuya_ble_status_t tuya_ble_device_update_mcu_version(uint32_t mcu_firmware_versi
 
 void tuya_ble_sdk_init_async(tuya_ble_device_param_t * param_data,tuya_ble_nv_async_callback_t callback);
 
+
+#if (TUYA_BLE_PROTOCOL_VERSION_HIGN==4) 
+
+/**
+ * @brief   Function for send the dp point data.
+ *
+ * @param   [in]sn: The sending sequence number of the application definition management.
+ *          [in]type  : DP_SEND_TYPE_ACTIVE- The device actively sends dp data;DP_SEND_TYPE_PASSIVE- The device passively sends dp data. For example, in order to answer the dp query command of the mobile app. Currently only applicable to WIFI+BLE combo devices.  
+ *          [in]mode  : See the description in the 'tuya_ble_type.h' file for details.
+ *          [in]ack   : See the description in the 'tuya_ble_type.h' file for details.
+ *          [in]p_dp_data  : The pointer of dp data .
+ *          [in]dp_data_len  : The length of dp data .
+ * @note    new api, The length of each dp data sent through this function must be 2 bytes. DTLD->'L' must be 2 bytes.
+ *.
+ * */
+
+tuya_ble_status_t tuya_ble_dp_data_send(uint32_t sn,tuya_ble_dp_data_send_type_t type,tuya_ble_dp_data_send_mode_t mode,tuya_ble_dp_data_send_ack_t ack,uint8_t *p_dp_data,uint32_t dp_data_len); 
+
+/**
+ * @brief   Function for send the dp data with time.
+ *
+ * @param   [in]sn: The sending sequence number of the application definition management.
+ *          [in]mode  : See the description in the 'tuya_ble_type.h' file for details.
+ *          [in]time_type   : DP_TIME_TYPE_MS_STRING - Indicates that the following 'p_time_data' is a string of milliseconds that must be 13 bytes in length.
+ *                            E.g, 'p_time_data' points to the string "1600777955000";
+ *                            DP_TIME_TYPE_UNIX_TIMESTAMP - Indicates that the following 'p_time_data' points to the four-byte unix timestamp data.
+ *                            E.g, unix timestamp is 1600777955 = 0x5F69EEE3, then 'p_time_data' is {0x5F,0x69,0xEE,0xE3} ;
+ *          [in]p_time_data   : time data pointer.
+ *          [in]p_dp_data   : The pointer of dp data .
+ *          [in]dp_data_len  : The length of dp data .
+ * @note    new api, The length of each dp data sent through this function must be 2 bytes. DTLD->'L' must be 2 bytes.
+ *.         The default type of this function is 'DP_SEND_TYPE_ACTIVE', and the default ack is 'DP_SEND_WITH_RESPONSE', which cannot be changed.
+ * */
+
+tuya_ble_status_t tuya_ble_dp_data_with_time_send(uint32_t sn,tuya_ble_dp_data_send_mode_t mode,tuya_ble_dp_data_send_time_type_t time_type,uint8_t *p_time_data,uint8_t *p_dp_data,uint32_t dp_data_len);
+
+
+
+#else
 
 /**
  * @brief   Function for report the dp point data.
@@ -120,6 +163,8 @@ tuya_ble_status_t tuya_ble_dp_data_with_time_report(uint32_t timestamp,uint8_t *
  * */
 
 tuya_ble_status_t tuya_ble_dp_data_with_time_ms_string_report(uint8_t *time_string,uint8_t *p_data,uint32_t len);
+
+#endif
 
 /**
  * @brief   Function for process the internal state of tuya sdk, application should  call this in connect handler.
@@ -211,6 +256,14 @@ tuya_ble_status_t tuya_ble_device_reset_response(uint8_t result_code);
  * */
 
 tuya_ble_connect_status_t tuya_ble_connect_status_get(void);
+
+/**
+ * @brief   Function for notify the sdk the device has unbind.
+ *
+ * @note    
+ *.
+ * */
+tuya_ble_status_t tuya_ble_device_unbind(void);
 
 /**
  * @brief   Function for notify the sdk the device has resumes factory Settings.
